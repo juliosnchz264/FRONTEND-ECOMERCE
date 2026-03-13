@@ -2,171 +2,451 @@ import { useForm } from 'react-hook-form'
 import { useProduct } from '../../../Hooks/useProduct.js'
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router'
+import { useEffect, useState } from 'react'
+import axios from 'axios'
+import { FiPlus, FiX, FiImage, FiPackage, FiDollarSign, FiTag, FiBox } from 'react-icons/fi'
+
+const API_URL = import.meta.env.VITE_BACKEND_URL;
 
 const CreateProductForm = () => {
+    const { 
+        createProduct, 
+        categories, 
+        categoriesLoading, 
+        getCategories 
+    } = useProduct()
+    
+    const navigate = useNavigate()
+    const [subcategories, setSubcategories] = useState([])
+    const [subcategoriesLoading, setSubcategoriesLoading] = useState(false)
+    const [imageUrls, setImageUrls] = useState([''])
+    const [isSubmitting, setIsSubmitting] = useState(false)
+
     const {
         register,
         handleSubmit,
         formState: { errors },
         reset,
-    } = useForm({ mode: 'onChange' })
+        watch,
+    } = useForm({ 
+        mode: 'onChange',
+        defaultValues: {
+            category: '',
+            subcategory: ''
+        }
+    })
 
-    const { createProduct } = useProduct()
+    const selectedCategoryId = watch('category')
+    const selectedCategory = categories.find(cat => cat._id === selectedCategoryId)
 
-    const navigate = useNavigate()
+    useEffect(() => {
+        if (categories.length === 0) {
+            getCategories()
+        }
+    }, [categories, getCategories])
+
+    useEffect(() => {
+        const loadSubcategories = async () => {
+            if (!selectedCategoryId) {
+                setSubcategories([])
+                return
+            }
+            
+            try {
+                setSubcategoriesLoading(true)
+                const response = await axios.get(
+                    `${API_URL}/subcategories/category/${selectedCategoryId}`
+                )
+                setSubcategories(response.data)
+            } catch (error) {
+                console.error('Error cargando subcategorías:', error)
+                toast.error('Error al cargar subcategorías')
+            } finally {
+                setSubcategoriesLoading(false)
+            }
+        }
+
+        loadSubcategories()
+    }, [selectedCategoryId])
+
+    const addImageField = () => {
+        setImageUrls([...imageUrls, ''])
+    }
+
+    const removeImageField = (index) => {
+        if (imageUrls.length > 1) {
+            const newUrls = imageUrls.filter((_, i) => i !== index)
+            setImageUrls(newUrls)
+        }
+    }
+
+    const updateImageUrl = (index, value) => {
+        const newUrls = [...imageUrls]
+        newUrls[index] = value
+        setImageUrls(newUrls)
+    }
 
     const onSubmit = async (data) => {
-        const result = await createProduct(data)
+        console.log('📝 onSubmit iniciado con datos:', data)
+        
+        try {
+            setIsSubmitting(true)
 
-        if (result.success) {
-            toast.success(result.message)
-            reset()
-            navigate('/admin/dashboard/products')
-        } else {
-            toast.error(result.message)
+            const validImages = imageUrls
+                .filter(url => url && url.trim() !== '')
+                .map(url => ({ url: url.trim() }))
+
+            if (validImages.length === 0) {
+                toast.error('Debes agregar al menos una imagen')
+                setIsSubmitting(false)
+                return
+            }
+
+            const selectedCat = categories.find(cat => cat._id === data.category)
+            
+            if (!selectedCat) {
+                console.error('❌ Categoría no encontrada:', data.category);
+                toast.error('Categoría no válida')
+                setIsSubmitting(false)
+                return
+            }
+
+            const productData = {
+                name: data.name,
+                description: data.description,
+                price: parseFloat(data.price),
+                stock: parseInt(data.stock),
+                category: selectedCat._id,
+                subcategory: data.subcategory || undefined,
+                images: validImages
+            }
+
+            console.log('📤 Enviando producto:', productData)
+
+            const result = await createProduct(productData)
+            
+            console.log('📥 Respuesta de createProduct:', result)
+
+            if (result.success) {
+                toast.success(result.message)
+                reset()
+                setImageUrls([''])
+                navigate('/admin/dashboard/products')
+            } else {
+                toast.error(result.message || 'Error al crear producto')
+            }
+        } catch (error) {
+            console.error('❌ Error en onSubmit:', error)
+            toast.error('Error inesperado al crear el producto')
+        } finally {
+            setIsSubmitting(false)
         }
     }
 
     return (
-        <form
-            onSubmit={handleSubmit(onSubmit)}
-            className="mt-8 flex flex-col gap-4 lg:gap-6 max-w-[500px] mx-auto"
-        >
-            <div>
-                <input
-                    {...register('name', {
-                        required: 'El nombre es requerido',
-                        minLength: {
-                            value: 3,
-                            message: 'Mínimo 3 caracteres',
-                        },
-                        maxLength: {
-                            value: 50,
-                            message: 'Máximo 50 caracteres',
-                        },
-                    })}
-                    className={`p-2 outline-2 rounded border focus:outline-primary w-full ${
-                        errors.name
-                            ? 'border-red-500 outline-red-500 focus:outline-red-500'
-                            : ''
-                    }`}
-                    type="text"
-                    placeholder="Nombre"
-                    name="name"
-                    autoComplete="name"
-                />
-                {errors.name && (
-                    <p className="text-red-400 text-sm mt-2 ml-1">
-                        {errors.name.message}
-                    </p>
-                )}
-            </div>
-            <div>
-                <input
-                    {...register('description', {
-                        required: 'La descripción es requerida',
-                        minLength: {
-                            value: 3,
-                            message: 'Mínimo 10 caracteres',
-                        },
-                        maxLength: {
-                            value: 500,
-                            message: 'Máximo 500 caracteres',
-                        },
-                    })}
-                    className={`p-2 outline-2 rounded border focus:outline-primary w-full ${
-                        errors.description
-                            ? 'border-red-500 outline-red-500 focus:outline-red-500'
-                            : ''
-                    }`}
-                    type="text"
-                    placeholder="Descripción"
-                    name="description"
-                    autoComplete="description"
-                />
-                {errors.description && (
-                    <p className="text-red-400 text-sm mt-2 ml-1">
-                        {errors.description.message}
-                    </p>
-                )}
-            </div>
-            <div>
-                <input
-                    {...register('price', {
-                        required: 'El precio es requerido',
-                        min: {
-                            value: 2,
-                            message: 'El precio debe ser máyor a 1',
-                        },
-                    })}
-                    className={`p-2 outline-2 rounded border focus:outline-primary w-full ${
-                        errors.price
-                            ? 'border-red-500 outline-red-500 focus:outline-red-500'
-                            : ''
-                    }`}
-                    type="number"
-                    placeholder="Precio"
-                    name="price"
-                    autoComplete="price"
-                />
-                {errors.price && (
-                    <p className="text-red-400 text-sm mt-2 ml-1">
-                        {errors.price.message}
-                    </p>
-                )}
-            </div>
-            <div>
-                <input
-                    {...register('stock', {
-                        required: 'El stock es requerido',
-                        min: {
-                            value: 0,
-                            message:
-                                'El stock minimo debe ser mayor o igual a 0',
-                        },
-                    })}
-                    className={`p-2 outline-2 rounded border focus:outline-primary w-full ${
-                        errors.stock
-                            ? 'border-red-500 outline-red-500 focus:outline-red-500'
-                            : ''
-                    }`}
-                    type="number"
-                    placeholder="Stock"
-                    name="stock"
-                    autoComplete="stock"
-                />
-                {errors.stock && (
-                    <p className="text-red-400 text-sm mt-2 ml-1">
-                        {errors.stock.message}
-                    </p>
-                )}
-            </div>
-            <div>
-                <input
-                    {...register('imageUrl', {
-                        required: 'La url de la imagen es requerida',
-                    })}
-                    className={`p-2 outline-2 rounded border focus:outline-primary w-full ${
-                        errors.imageUrl
-                            ? 'border-red-500 outline-red-500 focus:outline-red-500'
-                            : ''
-                    }`}
-                    type="text"
-                    placeholder="Imagen"
-                    name="imageUrl"
-                    autoComplete="imageUrl"
-                />
-                {errors.imageUrl && (
-                    <p className="text-red-400 text-sm mt-2 ml-1">
-                        {errors.imageUrl.message}
-                    </p>
-                )}
-            </div>
+        <div className="max-w-3xl mx-auto">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                {/* Nombre */}
+                <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                        Nombre del producto
+                    </label>
+                    <div className="relative">
+                        <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                            <FiTag className="w-5 h-5" />
+                        </div>
+                        <input
+                            {...register('name', {
+                                required: 'El nombre es requerido',
+                                minLength: { value: 3, message: 'Mínimo 3 caracteres' },
+                                maxLength: { value: 50, message: 'Máximo 50 caracteres' },
+                            })}
+                            className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all ${
+                                errors.name
+                                    ? 'border-red-300 focus:ring-red-200 focus:border-red-500'
+                                    : 'border-gray-300 focus:ring-purple-200 focus:border-purple-500'
+                            }`}
+                            placeholder="Ej: ASUS TUF Gaming A15"
+                            type="text"
+                        />
+                    </div>
+                    {errors.name && (
+                        <p className="text-red-500 text-sm flex items-center gap-1">
+                            <span className="inline-block w-1 h-1 bg-red-500 rounded-full"></span>
+                            {errors.name.message}
+                        </p>
+                    )}
+                </div>
 
-            <button className="btn btn-primary" type="submit">
-                Crear Producto
-            </button>
-        </form>
+                {/* Descripción */}
+                <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                        Descripción
+                    </label>
+                    <textarea
+                        {...register('description', {
+                            required: 'La descripción es requerida',
+                            minLength: { value: 10, message: 'Mínimo 10 caracteres' },
+                            maxLength: { value: 500, message: 'Máximo 500 caracteres' },
+                        })}
+                        rows={4}
+                        className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all resize-none ${
+                            errors.description
+                                ? 'border-red-300 focus:ring-red-200 focus:border-red-500'
+                                : 'border-gray-300 focus:ring-purple-200 focus:border-purple-500'
+                        }`}
+                        placeholder="Describe las características del producto..."
+                    />
+                    {errors.description && (
+                        <p className="text-red-500 text-sm flex items-center gap-1">
+                            <span className="inline-block w-1 h-1 bg-red-500 rounded-full"></span>
+                            {errors.description.message}
+                        </p>
+                    )}
+                </div>
+
+                {/* Categoría y Subcategoría en grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Categoría */}
+                    <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                            Categoría
+                        </label>
+                        <div className="relative">
+                            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                                <FiPackage className="w-5 h-5" />
+                            </div>
+                            <select
+                                {...register('category', {
+                                    required: 'La categoría es requerida',
+                                })}
+                                className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all appearance-none ${
+                                    errors.category
+                                        ? 'border-red-300 focus:ring-red-200 focus:border-red-500'
+                                        : 'border-gray-300 focus:ring-purple-200 focus:border-purple-500'
+                                } ${categoriesLoading ? 'opacity-50 cursor-wait' : ''}`}
+                                disabled={categoriesLoading}
+                            >
+                                <option value="">
+                                    {categoriesLoading ? 'Cargando...' : 'Seleccionar categoría'}
+                                </option>
+                                {categories.map((cat) => (
+                                    <option key={cat._id} value={cat._id}>
+                                        {cat.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        {errors.category && (
+                            <p className="text-red-500 text-sm flex items-center gap-1">
+                                <span className="inline-block w-1 h-1 bg-red-500 rounded-full"></span>
+                                {errors.category.message}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Subcategoría */}
+                    {selectedCategoryId && (
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-700">
+                                Subcategoría (opcional)
+                            </label>
+                            <div className="relative">
+                                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                                    <FiBox className="w-5 h-5" />
+                                </div>
+                                <select
+                                    {...register('subcategory')}
+                                    className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all appearance-none ${
+                                        subcategoriesLoading ? 'opacity-50 cursor-wait' : 'border-gray-300 focus:ring-purple-200 focus:border-purple-500'
+                                    }`}
+                                    disabled={subcategoriesLoading}
+                                >
+                                    <option value="">Sin subcategoría</option>
+                                    {subcategories.map((subcat) => (
+                                        <option key={subcat._id} value={subcat._id}>
+                                            {subcat.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            {subcategoriesLoading && (
+                                <p className="text-gray-400 text-sm">Cargando subcategorías...</p>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* Precio y Stock en grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Precio */}
+                    <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                            Precio ($)
+                        </label>
+                        <div className="relative">
+                            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                                <FiDollarSign className="w-5 h-5" />
+                            </div>
+                            <input
+                                {...register('price', {
+                                    required: 'El precio es requerido',
+                                    min: { value: 0.01, message: 'El precio debe ser mayor a 0' },
+                                })}
+                                className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all ${
+                                    errors.price
+                                        ? 'border-red-300 focus:ring-red-200 focus:border-red-500'
+                                        : 'border-gray-300 focus:ring-purple-200 focus:border-purple-500'
+                                }`}
+                                type="number"
+                                step="0.01"
+                                placeholder="899.99"
+                            />
+                        </div>
+                        {errors.price && (
+                            <p className="text-red-500 text-sm flex items-center gap-1">
+                                <span className="inline-block w-1 h-1 bg-red-500 rounded-full"></span>
+                                {errors.price.message}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Stock */}
+                    <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                            Stock
+                        </label>
+                        <div className="relative">
+                            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                                <FiBox className="w-5 h-5" />
+                            </div>
+                            <input
+                                {...register('stock', {
+                                    required: 'El stock es requerido',
+                                    min: { value: 0, message: 'El stock mínimo debe ser mayor o igual a 0' },
+                                })}
+                                className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all ${
+                                    errors.stock
+                                        ? 'border-red-300 focus:ring-red-200 focus:border-red-500'
+                                        : 'border-gray-300 focus:ring-purple-200 focus:border-purple-500'
+                                }`}
+                                type="number"
+                                step="1"
+                                placeholder="15"
+                            />
+                        </div>
+                        {errors.stock && (
+                            <p className="text-red-500 text-sm flex items-center gap-1">
+                                <span className="inline-block w-1 h-1 bg-red-500 rounded-full"></span>
+                                {errors.stock.message}
+                            </p>
+                        )}
+                    </div>
+                </div>
+
+                {/* URLs de imágenes */}
+                <div className="space-y-3">
+                    <label className="block text-sm font-medium text-gray-700">
+                        URLs de imágenes
+                    </label>
+                    
+                    <div className="space-y-3">
+                        {imageUrls.map((url, index) => (
+                            <div key={index} className="flex gap-2 items-start">
+                                <div className="flex-1">
+                                    <div className="relative">
+                                        <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                                            <FiImage className="w-5 h-5" />
+                                        </div>
+                                        <input
+                                            type="url"
+                                            value={url}
+                                            onChange={(e) => updateImageUrl(index, e.target.value)}
+                                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-500 transition-all"
+                                            placeholder={`URL de imagen ${index + 1}`}
+                                        />
+                                    </div>
+                                    {/* Vista previa */}
+                                    {url && (
+                                        <div className="mt-2 flex items-center gap-2">
+                                            <div className="w-16 h-16 rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
+                                                <img 
+                                                    src={url} 
+                                                    alt={`Preview ${index + 1}`}
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        e.target.onerror = null
+                                                        e.target.src = 'https://via.placeholder.com/64?text=Error'
+                                                    }}
+                                                />
+                                            </div>
+                                            <span className="text-xs text-gray-500">Vista previa</span>
+                                        </div>
+                                    )}
+                                </div>
+                                {imageUrls.length > 1 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => removeImageField(index)}
+                                        className="p-3 text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                                        title="Eliminar imagen"
+                                    >
+                                        <FiX className="w-5 h-5" />
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={addImageField}
+                        className="inline-flex items-center gap-2 px-4 py-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-xl transition-colors font-medium"
+                    >
+                        <FiPlus className="w-5 h-5" />
+                        Agregar otra imagen
+                    </button>
+                </div>
+
+                {/* Info de categoría seleccionada */}
+                {selectedCategory && (
+                    <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl">
+                        <div className="p-1 bg-green-100 rounded-lg">
+                            <FiPackage className="w-4 h-4 text-green-600" />
+                        </div>
+                        <span className="text-sm text-green-700">
+                            Categoría seleccionada: <strong>"{selectedCategory.name}"</strong>
+                        </span>
+                    </div>
+                )}
+
+                {/* Botones de acción */}
+                <div className="flex gap-4 pt-4">
+                    <button 
+                        className="flex-1 btn bg-gradient-to-r from-purple-600 to-purple-700 text-white border-0 hover:from-purple-700 hover:to-purple-800 py-3 rounded-xl font-semibold transition-all transform hover:-translate-y-0.5 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0" 
+                        type="submit"
+                        disabled={isSubmitting || categoriesLoading}
+                    >
+                        {isSubmitting ? (
+                            <>
+                                <span className="loading loading-spinner loading-sm"></span>
+                                Creando producto...
+                            </>
+                        ) : (
+                            'Crear Producto'
+                        )}
+                    </button>
+                    
+                    <button 
+                        type="button"
+                        onClick={() => navigate('/admin/dashboard/products')}
+                        className="flex-1 btn btn-ghost border border-gray-200 hover:bg-gray-50 py-3 rounded-xl font-semibold transition-all"
+                    >
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
     )
 }
 

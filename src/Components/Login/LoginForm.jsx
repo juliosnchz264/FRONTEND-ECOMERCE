@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { FaEye, FaEyeSlash } from 'react-icons/fa'
-import { useNavigate, useLocation } from 'react-router' // 👈 Hooks recomendados
+import { FaEye, FaEyeSlash, FaEnvelope, FaLock } from 'react-icons/fa'
+import { useNavigate, useLocation } from 'react-router'
 import { loginService } from '../../services/authServices'
 import { useUser } from '../../Hooks/useUser.js'
 import toast from 'react-hot-toast'
@@ -17,95 +17,131 @@ const LoginForm = () => {
     const [showPassword, setShowPassword] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
 
-    // 💡 Capturamos la ruta de origen si existe (por ejemplo, desde ProtectedRoute)
     const from = location.state?.from?.pathname
 
     const onSubmit = async (data) => {
-    try {
-        setIsSubmitting(true)
-        const result = await loginService(data)
+        try {
+            setIsSubmitting(true)
+            const result = await loginService(data)
 
-        if (result && result.success) {
-            // 1. Actualizamos el contexto
-            // Es vital que result.user contenga los datos correctos
-            await setUserInfo(result.user) 
-            
-            toast.success(result.message || '¡Bienvenido!')
-            reset()
+            if (result && result.success) {
+                await setUserInfo(result.user) 
+                
+                toast.success(result.message || '¡Bienvenido!')
+                reset()
 
-            // 2. Pequeño respiro para que el estado de React se asiente
-            // y las cookies/localStorage se sincronicen
-            const destination = from || (result.user.isAdmin ? '/admin/dashboard/products' : '/')
-            
-            navigate(destination, { replace: true })
-        } else {
-            // Si el servicio responde pero success es false (ej. 401 Unauthorized)
-            toast.error(result?.message || 'Credenciales incorrectas')
+                const destination = from || (result.user.isAdmin ? '/admin/dashboard/products' : '/')
+                
+                navigate(destination, { replace: true })
+            } else {
+                toast.error(result?.message || 'Credenciales incorrectas')
+            }
+        } catch (error) {
+            console.error("Error en login form:", error)
+            toast.error('Error de conexión con el servidor')
+        } finally {
+            setIsSubmitting(false)
         }
-    } catch (error) {
-        // Este catch captura errores de red o errores de código dentro del try
-        console.error("Error en login form:", error)
-        toast.error('Error de conexión con el servidor')
-    } finally {
-        setIsSubmitting(false)
     }
-}
 
     return (
-        <form
-            onSubmit={handleSubmit(onSubmit)}
-            className="mt-8 flex flex-col gap-4 lg:gap-6 max-w-[500px] mx-auto"
-        >
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* EMAIL INPUT */}
-            <div className="flex flex-col gap-1">
-                <input
-                    {...register('email', {
-                        required: 'El email es requerido',
-                        pattern: {
-                            value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                            message: 'Correo electrónico inválido',
-                        }
-                    })}
-                    className={`p-2 outline-2 rounded border focus:outline-primary w-full transition-all ${
-                        errors.email ? 'border-red-500 focus:outline-red-500' : 'border-gray-300'
-                    }`}
-                    placeholder="Correo electrónico"
-                    type="email"
-                />
-                {errors.email && <p className="text-red-500 text-xs italic">{errors.email.message}</p>}
+            <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                    Correo electrónico
+                </label>
+                <div className="relative">
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                        <FaEnvelope className="w-5 h-5" />
+                    </div>
+                    <input
+                        {...register('email', {
+                            required: 'El email es requerido',
+                            pattern: {
+                                value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                                message: 'Correo electrónico inválido',
+                            }
+                        })}
+                        className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all ${
+                            errors.email 
+                                ? 'border-red-300 focus:ring-red-200 focus:border-red-500' 
+                                : 'border-gray-300 focus:ring-purple-200 focus:border-purple-500'
+                        }`}
+                        placeholder="tu@email.com"
+                        type="email"
+                    />
+                </div>
+                {errors.email && (
+                    <p className="text-red-500 text-sm flex items-center gap-1">
+                        <span className="inline-block w-1 h-1 bg-red-500 rounded-full"></span>
+                        {errors.email.message}
+                    </p>
+                )}
             </div>
 
             {/* PASSWORD INPUT */}
-            <div className="flex flex-col gap-1 relative">
+            <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                    <label className="block text-sm font-medium text-gray-700">
+                        Contraseña
+                    </label>
+                    <button 
+                        type="button"
+                        className="text-sm text-purple-600 hover:text-purple-700 hover:underline"
+                    >
+                        ¿Olvidaste tu contraseña?
+                    </button>
+                </div>
                 <div className="relative">
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                        <FaLock className="w-5 h-5" />
+                    </div>
                     <input
                         {...register('password', {
                             required: 'La contraseña es requerida',
                             minLength: { value: 6, message: 'Mínimo 6 caracteres' }
                         })}
-                        className={`p-2 outline-2 rounded border focus:outline-primary w-full transition-all ${
-                            errors.password ? 'border-red-500 focus:outline-red-500' : 'border-gray-300'
+                        className={`w-full pl-10 pr-12 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all ${
+                            errors.password 
+                                ? 'border-red-300 focus:ring-red-200 focus:border-red-500' 
+                                : 'border-gray-300 focus:ring-purple-200 focus:border-purple-500'
                         }`}
-                        placeholder="Contraseña"
+                        placeholder="••••••••"
                         type={showPassword ? 'text' : 'password'}
                     />
                     <button
                         onClick={() => setShowPassword((prev) => !prev)}
                         type="button"
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-primary transition-colors"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-purple-600 transition-colors"
                     >
                         {showPassword ? <FaEyeSlash size={20} /> : <FaEye size={20} />}
                     </button>
                 </div>
-                {errors.password && <p className="text-red-500 text-xs italic">{errors.password.message}</p>}
+                {errors.password && (
+                    <p className="text-red-500 text-sm flex items-center gap-1">
+                        <span className="inline-block w-1 h-1 bg-red-500 rounded-full"></span>
+                        {errors.password.message}
+                    </p>
+                )}
             </div>
 
+            {/* Botón de submit */}
             <button 
                 disabled={isSubmitting}
-                className={`btn btn-primary w-full ${isSubmitting ? 'loading' : ''}`} 
+                className={`w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-semibold rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all transform hover:-translate-y-0.5 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 ${
+                    isSubmitting ? 'opacity-75 cursor-not-allowed' : ''
+                }`}
                 type="submit"
             >
-                {isSubmitting ? 'Cargando...' : 'Iniciar sesión'}
+                {isSubmitting ? (
+                    <>
+                        <span className="loading loading-spinner loading-sm"></span>
+                        Iniciando sesión...
+                    </>
+                ) : (
+                    'Iniciar sesión'
+                )}
             </button>
         </form>
     )

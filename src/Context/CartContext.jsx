@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect } from 'react'
+import { createContext, useState, useEffect, useCallback, useMemo } from 'react'
 import { useUser } from '../Hooks/useUser.js'
 import {
     addToCartService,
@@ -13,10 +13,9 @@ export const CartContext = createContext({})
 
 export const CartContextProvider = ({ children }) => {
     const [cart, setCart] = useState([])
-    const [total, setTotal] = useState(0)
-    const [itemsQuantity, setItemsQuantity] = useState(0)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [loading, setLoading] = useState(true)
+    const [syncInProgress, setSyncInProgress] = useState(false)
 
     const {
         getUserId,
@@ -25,8 +24,17 @@ export const CartContextProvider = ({ children }) => {
         userInfo,
     } = useUser()
 
-    // Función para cargar el carrito desde localStorage
-    const loadLocalCart = () => {
+    // Cálculo de totales con useMemo para optimizar rendimiento
+    const total = useMemo(() => {
+        return cart.reduce((acc, item) => acc + item.price * (item.quantity || 1), 0)
+    }, [cart])
+
+    const itemsQuantity = useMemo(() => {
+        return cart.reduce((acc, item) => acc + (item.quantity || 1), 0)
+    }, [cart])
+
+    // Funciones de localStorage memoizadas
+    const loadLocalCart = useCallback(() => {
         try {
             const localCart = localStorage.getItem('cart')
             return localCart ? JSON.parse(localCart) : []
@@ -34,19 +42,18 @@ export const CartContextProvider = ({ children }) => {
             console.error('Error al cargar carrito local:', error)
             return []
         }
-    }
+    }, [])
 
-    // Función para guardar el carrito en localStorage
-    const saveLocalCart = (cartItems) => {
+    const saveLocalCart = useCallback((cartItems) => {
         try {
             localStorage.setItem('cart', JSON.stringify(cartItems))
         } catch (error) {
             console.error('Error al guardar carrito local:', error)
         }
-    }
+    }, [])
 
     // Función para cargar el carrito (backend o localStorage)
-    const loadCart = async () => {
+    const loadCart = useCallback(async () => {
         if (isAuthenticated()) {
             const userId = getUserId()
             if (!userId) return
@@ -55,7 +62,6 @@ export const CartContextProvider = ({ children }) => {
                 setLoading(true);
                 const response = await getCartService(userId);
 
-                // Si el backend responde con éxito pero sin productos (carrito recién vaciado)
                 const cartItems = response.cart?.products?.map((item) => ({
                     _id: item.productId._id,
                     name: item.productId.name,
@@ -77,15 +83,15 @@ export const CartContextProvider = ({ children }) => {
             const localCart = loadLocalCart();
             setCart(localCart);
         }
-    };
+    }, [isAuthenticated, getUserId, loadLocalCart]);
 
     // Función para sincronizar carrito local con el backend
-    const syncCartWithBackend = async () => {
+    const syncCartWithBackend = useCallback(async () => {
         const localCart = loadLocalCart()
         const userId = getUserId()
 
-       // Escudo: Solo sincroniza si hay items Y hay un userId real
-        if (localCart.length > 0 && isAuthenticated() && userId) {
+        if (localCart.length > 0 && isAuthenticated() && userId && !syncInProgress) {
+            setSyncInProgress(true)
             try {
                 setLoading(true)
                 for (const item of localCart) {
@@ -93,90 +99,94 @@ export const CartContextProvider = ({ children }) => {
                 }
                 localStorage.removeItem('cart')
                 await loadCart()
-                toast.success('Carrito sincronizado')
+                toast.success('Carrito sincronizado correctamente')
             } catch (error) {
                 console.error('Error al sincronizar:', error)
+                toast.error('Error al sincronizar el carrito')
             } finally {
                 setLoading(false)
+                setSyncInProgress(false)
             }
         }
-    }
+    }, [isAuthenticated, getUserId, loadLocalCart, loadCart, syncInProgress]);
 
-// Manejo de Auth Changes
+    // Manejo de cambios de autenticación
     useEffect(() => {
         if (userLoading) return
 
         if (userInfo?.id) {
             const localCart = loadLocalCart()
-            if (localCart.length > 0) {
+            if (localCart.length > 0 && !syncInProgress) {
                 syncCartWithBackend()
             } else {
                 loadCart()
             }
         } else {
-            // Logout o Invitado: Resetear a local sin peticiones al servidor
             setCart(loadLocalCart())
             setLoading(false)
         }
-    }, [userInfo?.id, userLoading])
+    }, [userInfo?.id, userLoading, loadLocalCart, loadCart, syncCartWithBackend, syncInProgress]);
 
-    // Cálculo de totales
-    useEffect(() => {
-        const newTotal = cart.reduce((acc, item) => acc + item.price * (item.quantity || 1), 0)
-        setTotal(newTotal)
-        const newQty = cart.reduce((acc, item) => acc + (item.quantity || 1), 0)
-        setItemsQuantity(newQty)
-    }, [cart])
-
-    const addToCart = async (product, quantity = 1) => {
+    const addToCart = useCallback(async (product, quantity = 1) => {
         const userId = getUserId()
-        if (isAuthenticated() && userId) { // Escudo para el 400
+        if (isAuthenticated() && userId) {
             try {
                 setLoading(true)
                 await addToCartService(userId, product._id, quantity)
                 await loadCart()
-                toast.success('Producto agregado')
+                toast.success('Producto agregado al carrito')
             } catch (error) {
                 toast.error('Error al agregar al carrito')
             } finally {
                 setLoading(false)
             }
         } else {
-            const currentCart = [...cart]
-            const existingIndex = currentCart.findIndex(item => item._id === product._id)
-            if (existingIndex > -1) {
-                currentCart[existingIndex].quantity += quantity
-            } else {
-                currentCart.push({ ...product, quantity })
-            }
-            setCart(currentCart)
-            saveLocalCart(currentCart)
-            toast.success('Producto agregado al carrito')
+            setCart(prevCart => {
+                const existingIndex = prevCart.findIndex(item => item._id === product._id)
+                let newCart;
+                
+                if (existingIndex > -1) {
+                    newCart = prevCart.map((item, index) => 
+                        index === existingIndex 
+                            ? { ...item, quantity: (item.quantity || 1) + quantity }
+                            : item
+                    );
+                } else {
+                    newCart = [...prevCart, { ...product, quantity }];
+                }
+                
+                saveLocalCart(newCart);
+                return newCart;
+            });
+            toast.success('Producto agregado al carrito');
         }
-    }
+    }, [isAuthenticated, getUserId, loadCart, saveLocalCart]);
 
-    const removeFromCart = async (productId) => {
+    const removeFromCart = useCallback(async (productId) => {
         const userId = getUserId()
         if (isAuthenticated() && userId) {
             try {
                 setLoading(true)
                 await removeFromCartService(userId, productId)
                 await loadCart()
-                toast.success('Eliminado del carrito')
+                toast.success('Producto eliminado del carrito')
             } catch (error) {
-                toast.error('Error al eliminar')
+                toast.error('Error al eliminar producto')
             } finally {
                 setLoading(false)
             }
         } else {
-            const currentCart = cart.filter(item => item._id !== productId)
-            setCart(currentCart)
-            saveLocalCart(currentCart)
+            setCart(prevCart => {
+                const newCart = prevCart.filter(item => item._id !== productId)
+                saveLocalCart(newCart)
+                return newCart
+            })
         }
-    }
+    }, [isAuthenticated, getUserId, loadCart, saveLocalCart]);
 
-    const updateQuantity = async (productId, newQuantity) => {
+    const updateQuantity = useCallback(async (productId, newQuantity) => {
         if (newQuantity < 1) return
+        
         const userId = getUserId()
         if (isAuthenticated() && userId) {
             try {
@@ -189,21 +199,24 @@ export const CartContextProvider = ({ children }) => {
                 setLoading(false)
             }
         } else {
-            const currentCart = cart.map(item =>
-                item._id === productId ? { ...item, quantity: newQuantity } : item
-            )
-            setCart(currentCart)
-            saveLocalCart(currentCart)
+            setCart(prevCart => {
+                const newCart = prevCart.map(item =>
+                    item._id === productId ? { ...item, quantity: newQuantity } : item
+                )
+                saveLocalCart(newCart)
+                return newCart
+            })
         }
-    }
+    }, [isAuthenticated, getUserId, loadCart, saveLocalCart]);
 
-    const clearCart = async () => {
+    const clearCart = useCallback(async () => {
         const userId = getUserId()
         if (isAuthenticated() && userId) {
             try {
                 setLoading(true)
                 await clearCartService(userId)
                 setCart([])
+                toast.success('Carrito vaciado')
             } catch (error) {
                 toast.error('Error al limpiar carrito')
             } finally {
@@ -213,18 +226,28 @@ export const CartContextProvider = ({ children }) => {
             setCart([])
             saveLocalCart([])
         }
-    }
+    }, [isAuthenticated, getUserId, saveLocalCart]);
+
+    const openModal = useCallback(() => setIsModalOpen(true), []);
+    const closeModal = useCallback(() => setIsModalOpen(false), []);
+
+    const value = {
+        cart,
+        total,
+        itemsQuantity,
+        isModalOpen,
+        loading,
+        addToCart,
+        removeFromCart,
+        clearCart,
+        updateQuantity,
+        openModal,
+        closeModal,
+        loadCart,
+    };
 
     return (
-        <CartContext.Provider
-            value={{
-                cart, setCart, total, itemsQuantity, isModalOpen, loading,
-                addToCart, removeFromCart, clearCart, updateQuantity,
-                openModal: () => setIsModalOpen(true),
-                closeModal: () => setIsModalOpen(false),
-                loadCart,
-            }}
-        >
+        <CartContext.Provider value={value}>
             {children}
         </CartContext.Provider>
     )

@@ -1,4 +1,4 @@
-import CreateProductForm from '../Components/AdminDashboard/CreateProductForm/CreateProductForm'
+import CreateProductForm from '../../Components/AdminDashboard/CreateProductForm/CreateProductForm'
 
 const CreateProduct = () => {
     return (

@@ -50,3 +50,102 @@
 .no-scrollbar::-webkit-scrollbar {
     display: none; /* Chrome, Safari, Opera */
 }
+
+/* ===================================== */
+/* ESTILOS PARA REACT-IMAGE-MAGNIFIERS */
+/* ===================================== */
+
+/* Contenedor principal del zoom */
+.react-image-magnifiers__container {
+    width: 100% !important;
+    height: 100% !important;
+    position: relative !important;
+    display: block !important;
+}
+
+/* Contenedor de la imagen principal */
+.react-image-magnifiers__preview {
+    width: 100% !important;
+    height: 100% !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+/* Imagen principal */
+.react-image-magnifiers__image {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+    display: block !important;
+}
+
+/* Contenedor del zoom (lupa/lente) */
+.react-image-magnifiers__zoom {
+    position: absolute !important;
+    z-index: 100 !important;
+    pointer-events: none !important;
+    background-repeat: no-repeat !important;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1) !important;
+    border-radius: 50% !important;
+}
+
+/* Borde del zoom */
+.react-image-magnifiers__zoom-border {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    border: 2px solid rgba(0, 0, 0, 0.1) !important;
+    border-radius: inherit !important;
+    pointer-events: none !important;
+}
+
+/* Para el tipo GlassMagnifier */
+.react-image-magnifiers__glass-preview {
+    width: 100% !important;
+    height: 100% !important;
+    position: relative !important;
+}
+
+.react-image-magnifiers__glass-image {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+}
+
+/* Para el tipo Magnifier (lente) */
+.react-image-magnifiers__lens {
+    position: absolute !important;
+    border: 2px solid rgba(0, 0, 0, 0.1) !important;
+    background-repeat: no-repeat !important;
+    pointer-events: none !important;
+    z-index: 100 !important;
+}
+
+/* Asegurar que el cursor cambie en el área de zoom */
+.react-image-magnifiers__container:hover {
+    cursor: zoom-in !important;
+}
+
+.react-image-magnifiers__container:active {
+    cursor: zoom-out !important;
+}
+
+/* Solución para problemas de z-index */
+.react-image-magnifiers__container * {
+    z-index: auto;
+}
+
+/* Forzar que el contenedor tenga dimensiones explícitas */
+[class*="react-image-magnifiers"] {
+    box-sizing: border-box !important;
+}
+
+/* Estilos específicos para móvil (opcional) */
+@media (max-width: 768px) {
+    .react-image-magnifiers__zoom {
+        width: 150px !important;
+        height: 150px !important;
+    }
+}

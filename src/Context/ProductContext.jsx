@@ -6,17 +6,24 @@ import {
 } from 'react'
 import axios from 'axios'
 
+// Configuración global de axios para enviar cookies en todas las peticiones
 axios.defaults.withCredentials = true
 
 const API_URL = import.meta.env.VITE_BACKEND_URL + '/products'
+const CATEGORIES_URL = import.meta.env.VITE_BACKEND_URL + '/categories'
 
 export const ProductContext = createContext({})
 
 export const ProductContextProvider = ({ children }) => {
-// 1. Estados para el filtrado
-    const [allProducts, setAllProducts] = useState([]) // "Copia maestra" del backend
-    const [filteredProducts, setFilteredProducts] = useState([]) // Lo que se muestra en UI
+    // Estados existentes
+    const [allProducts, setAllProducts] = useState([])
+    const [filteredProducts, setFilteredProducts] = useState([])
     const [selectedCategory, setSelectedCategory] = useState('Todos')
+    const [selectedSubcategory, setSelectedSubcategory] = useState(null)
+    
+    // Estados para categorías
+    const [categories, setCategories] = useState([])
+    const [categoriesLoading, setCategoriesLoading] = useState(false)
     
     const [productsLoading, setProductsLoading] = useState(true)
     const [product, setProduct] = useState({})
@@ -29,25 +36,37 @@ export const ProductContextProvider = ({ children }) => {
             setProductsLoading(true)
             const response = await axios.get(API_URL)
             setAllProducts(response.data)
-            setFilteredProducts(response.data) // Al inicio, mostrar todos
+            setFilteredProducts(response.data)
+            return response.data
         } catch (error) {
+            console.error('❌ FETCH - Error:', error);
             setError(error.message || 'Error al obtener los productos')
+            return []
         } finally {
             setProductsLoading(false)
         }
     }, [])
 
-// 2. Función de filtrado por categoría
-    const filterByCategory = useCallback((category) => {
-        setSelectedCategory(category)
-        
-        if (category === 'Todos') {
-            setFilteredProducts(allProducts)
-        } else {
-            const filtered = allProducts.filter(p => p.category === category)
-            setFilteredProducts(filtered)
+    // Función para obtener categorías
+    const getCategories = useCallback(async () => {
+        try {
+            setCategoriesLoading(true)
+            const response = await axios.get(CATEGORIES_URL)
+            setCategories(response.data)
+            return response.data
+        } catch (error) {
+            console.error('❌ FRONTEND: Error completo:', error)
+            return []
+        } finally {
+            setCategoriesLoading(false)
         }
-    }, [allProducts])
+    }, [])
+
+    // Función de filtrado por categoría
+    const filterByCategory = useCallback((categoryName, subcategoryId = null) => {
+        setSelectedCategory(categoryName);
+        setSelectedSubcategory(subcategoryId);
+    }, []);
 
     const getProductById = useCallback(async (id) => {
         setProductLoading(true)
@@ -55,95 +74,244 @@ export const ProductContextProvider = ({ children }) => {
         try {
             const response = await axios.get(`${API_URL}/${id}`)
             setProduct(response.data)
+            return response.data
         } catch (error) {
             setError(error.message || 'Error al obtener el producto')
+            return null
         } finally {
             setProductLoading(false)
         }
     }, [])
 
+    // 🚀 VERSIÓN CORREGIDA - SOLO COOKIES, SIN LOCALSTORAGE
     const updateProduct = useCallback(async (id, data) => {
-        const cleanData = {
-            name: data.name,
-            description: data.description,
-            price: Number(data.price),
-            stock: Number(data.stock),
-            imageUrl: data.imageUrl,
-            category: data.category, // No olvides incluir la categoría aquí
-        }
+        console.log('📦 updateProduct recibió:', data);
 
         try {
-            const response = await axios.put(`${API_URL}/${id}`, cleanData)
+            // ✅ ELIMINADO: const token = localStorage.getItem('token');
+            // ✅ Las cookies se envían automáticamente gracias a withCredentials: true
+
+            const response = await axios.put(`${API_URL}/${id}`, data, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    // ✅ NO NECESITAMOS Authorization header
+                }
+            });
 
             if (response.status === 200) {
-                setProduct(response.data)
-                // Actualizamos la lista maestra
-                setAllProducts((prev) =>
-                    prev.map((p) => (p._id === id ? response.data : p))
-                )
-                return { success: true, message: 'Producto actualizado' }
+                const updatedProduct = response.data.product || response.data
+                
+                console.log('✅ Producto actualizado:', updatedProduct)
+                
+                // Actualizar el producto en el estado
+                setProduct(updatedProduct)
+                
+                // Actualizar en allProducts
+                setAllProducts((prev) => {
+                    const newProducts = prev.map((p) => 
+                        p._id === id ? updatedProduct : p
+                    )
+                    return newProducts
+                })
+                
+                return { 
+                    success: true, 
+                    message: response.data.message || 'Producto actualizado',
+                    data: updatedProduct 
+                }
             }
         } catch (error) {
-            return { success: false, message: 'Error al actualizar' }
+            console.error('❌ Error al actualizar:', {
+                status: error.response?.status,
+                data: error.response?.data,
+                message: error.message
+            });
+            
+            // Manejar error 401 específicamente
+            if (error.response?.status === 401) {
+                return { 
+                    success: false, 
+                    message: 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.' 
+                };
+            }
+            
+            return { 
+                success: false, 
+                message: error.response?.data?.message || 'Error al actualizar' 
+            };
         }
-    }, [])
+    }, []);
 
+    // 🚀 VERSIÓN CORREGIDA - SOLO COOKIES
     const createProduct = useCallback(async (data) => {
-        const cleanData = {
-            name: data.name,
-            description: data.description,
-            price: Number(data.price),
-            stock: Number(data.stock),
-            imageUrl: data.imageUrl,
-            category: data.category, // Incluimos categoría al crear
-        }
+        console.log('📦 createProduct recibió:', data);
 
         try {
-            const response = await axios.post(API_URL, cleanData)
+            // ✅ ELIMINADO: const token = localStorage.getItem('token');
+
+            const response = await axios.post(API_URL, data, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    // ✅ SIN Authorization header
+                }
+            });
+            
             if (response.status === 201) {
-                setAllProducts((prev) => [...prev, response.data.product])
-                return { success: true, message: 'Producto creado' }
+                const newProduct = response.data.product || response.data
+                console.log('✅ Producto creado:', newProduct)
+                
+                setAllProducts((prev) => [...prev, newProduct])
+                
+                if (selectedCategory) {
+                    filterByCategory(selectedCategory, selectedSubcategory);
+                }
+                
+                return { 
+                    success: true, 
+                    message: response.data.message || 'Producto creado exitosamente',
+                    data: newProduct
+                }
             }
         } catch (error) {
-            return { success: false, message: 'Error al crear' }
+            console.error('❌ Error en createProduct:', error.response?.data || error.message)
+            
+            if (error.response?.status === 401) {
+                return { 
+                    success: false, 
+                    message: 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.' 
+                };
+            }
+            
+            return { 
+                success: false, 
+                message: error.response?.data?.message || 'Error al crear el producto',
+                error: error.response?.data
+            }
         }
-    }, [])
+    }, [selectedCategory, selectedSubcategory, filterByCategory]);
 
+    // 🚀 VERSIÓN CORREGIDA - SOLO COOKIES
     const deleteProduct = useCallback(async (id) => {
         try {
-            const response = await axios.delete(`${API_URL}/${id}`)
+            // ✅ ELIMINADO: const token = localStorage.getItem('token');
+
+            const response = await axios.delete(`${API_URL}/${id}`, {
+                headers: {
+                    // ✅ SIN Authorization header
+                }
+            });
+            
             if (response.status === 200) {
+                console.log('🗑️ Producto eliminado:', id)
                 setAllProducts((prev) => prev.filter((p) => p._id !== id))
-                return { success: true, message: 'Producto eliminado' }
+                
+                if (selectedCategory) {
+                    filterByCategory(selectedCategory, selectedSubcategory);
+                }
+                
+                return { 
+                    success: true, 
+                    message: response.data.message || 'Producto eliminado' 
+                }
             }
         } catch (error) {
-            return { success: false, message: 'Error al eliminar' }
+            console.error('Error al eliminar:', error.response?.data)
+            
+            if (error.response?.status === 401) {
+                return { 
+                    success: false, 
+                    message: 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.' 
+                };
+            }
+            
+            return { 
+                success: false, 
+                message: error.response?.data?.message || 'Error al eliminar' 
+            }
         }
-    }, [])
+    }, [selectedCategory, selectedSubcategory, filterByCategory]);
 
-    // Sincronizar filteredProducts cuando la lista maestra cambie (ej: al borrar/crear)
+    // Efecto para filtrar cuando cambian las dependencias
     useEffect(() => {
-        filterByCategory(selectedCategory)
-    }, [allProducts, selectedCategory, filterByCategory])
+        if (allProducts.length === 0) {
+            setFilteredProducts([]);
+            return;
+        }
 
+        if (selectedCategory === 'Todos') {
+            setFilteredProducts(allProducts);
+            return;
+        }
+
+        if (!categories || categories.length === 0) {
+            setFilteredProducts(allProducts);
+            return;
+        }
+
+        let selectedCategoryObj = categories.find(c => {
+            const catName = c.name?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            const selectedName = selectedCategory?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            return catName === selectedName;
+        });
+
+        if (!selectedCategoryObj) {
+            selectedCategoryObj = categories.find(c => c._id === selectedCategory);
+        }
+
+        if (!selectedCategoryObj) {
+            setFilteredProducts([]);
+            return;
+        }
+
+        let filtered = allProducts.filter(p => {
+            const productCategoryId = p.category?._id?.toString() || p.category?.toString();
+            return productCategoryId === selectedCategoryObj._id.toString();
+        });
+
+        if (selectedSubcategory) {
+            filtered = filtered.filter(p => {
+                const productSubcategoryId = p.subcategory?._id?.toString() || p.subcategory?.toString();
+                return productSubcategoryId === selectedSubcategory.toString();
+            });
+        }
+
+        setFilteredProducts(filtered);
+
+    }, [allProducts, selectedCategory, selectedSubcategory, categories]);
+
+    // Cargar productos y categorías al montar
     useEffect(() => {
         getProducts()
-    }, [getProducts])
+        getCategories()
+    }, [getProducts, getCategories])
 
     const value = {
+        // Productos
         product,
-        products: filteredProducts, // <-- IMPORTANTE: Ahora exportamos los filtrados como "products"
+        products: filteredProducts,
         allProducts,
         productsLoading,
         productLoading,
-        selectedCategory,
         error,
+        
+        // Categorías
+        categories,
+        categoriesLoading,
+        getCategories,
+        
+        // Filtros
+        selectedCategory,
+        selectedSubcategory,
+        setSelectedCategory,
+        setSelectedSubcategory,
+        filterByCategory,
+        
+        // Acciones
         getProducts,
         getProductById,
         updateProduct,
         createProduct,
         deleteProduct,
-        filterByCategory, // Exportamos la función de filtrado
     }
 
     return (

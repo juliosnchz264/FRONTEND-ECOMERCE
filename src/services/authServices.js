@@ -38,6 +38,7 @@ export const loginService = async (data) => {
     }
 }
 
+// ✅ VERSIÓN CORREGIDA - Siempre devuelve la misma estructura
 export const registerService = async (data, reset, setRedirect, checkSession) => {
     try {
         const response = await axios.post(`${API_URL}/register`, data)
@@ -51,25 +52,39 @@ export const registerService = async (data, reset, setRedirect, checkSession) =>
             reset()
             setRedirect(true)
 
-            return { success: true, data: response.data }
+            // ✅ Siempre devolver con success: true
+            return { 
+                success: true, 
+                message: 'Registro exitoso',
+                data: response.data 
+            }
         }
+        
+        // ✅ Si llegamos aquí, algo salió mal con el status
+        return { 
+            success: false, 
+            message: 'Error en el registro' 
+        }
+        
     } catch (error) {
-        return { success: false, message: error.response?.data?.message || 'Error al registrarse' }
+        console.error('Error en registro:', error)
+        // ✅ Siempre devolver con success: false
+        return { 
+            success: false, 
+            message: error.response?.data?.message || 'Error al registrarse' 
+        }
     }
 }
 
 export const logoutService = async () => {
     try {
-        // 🚩 CORRECCIÓN: Añadido await
         const response = await axios.post(`${API_URL}/logout`)
         
-        // 🚩 CORRECCIÓN: Limpieza del storage para evitar fugas de datos
         localStorage.removeItem('userInfo')
         localStorage.removeItem('wasAuthenticated')
         
         return response.data
     } catch (error) {
-        // Limpiamos de todos modos por seguridad si falla la red
         localStorage.removeItem('userInfo')
         localStorage.removeItem('wasAuthenticated')
         throw new Error(error.response?.data?.message || 'Error al cerrar la sesión')
