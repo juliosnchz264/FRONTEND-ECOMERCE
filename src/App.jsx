@@ -21,6 +21,10 @@ import PaymentSuccess from './Pages/PaymentSuccess'
 import PaymentFailure from './Pages/PaymentFailure'
 import PaymentPending from './Pages/PaymentPending'
 
+// 👇 IMPORTA LAS NUEVAS PÁGINAS DE ERROR
+import NotFound from './Pages/NotFound'
+import ServerError from './Pages/ServerError'
+
 function App() {
     return (
         <UserContextProvider>
@@ -48,9 +52,13 @@ function App() {
                                 <Route path="/payment/failure" element={<ProtectedRoute><PaymentFailure /></ProtectedRoute>} />
                                 <Route path="/payment/pending" element={<ProtectedRoute><PaymentPending /></ProtectedRoute>} />
 
-                                {/* ADMINISTRACIÓN - Solo una ruta que apunta a AdminDashboard */}
+                                {/* ADMINISTRACIÓN */}
                                 <Route path="/admin/dashboard/*" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
                             </Route>
+
+                            {/* 👇 RUTAS DE ERROR - VAN FUERA DEL LAYOUT PRINCIPAL */}
+                            <Route path="/500" element={<ServerError />} />
+                            <Route path="*" element={<NotFound />} />
                         </Routes>
                     </CartContextProvider>
                 </CategoryContextProvider>
