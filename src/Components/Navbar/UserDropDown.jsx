@@ -1,5 +1,4 @@
 import { useUser } from '../../Hooks/useUser.js'
-import { logoutService } from '../../services/authServices'
 import { useNavigate, Link } from 'react-router'
 import toast from 'react-hot-toast'
 
@@ -7,22 +6,15 @@ import toast from 'react-hot-toast'
 const baseServerUrl = import.meta.env.VITE_BACKEND_URL.replace('/api', '');
 
 const UserDropDown = () => {
-    const { userInfo, setUserInfo } = useUser()
+    const { userInfo, logout } = useUser()
     const navigate = useNavigate()
 
     const handleLogout = async () => {
     try {
-        await logoutService();
-        
-        // 1. Limpiamos el estado de React
-        setUserInfo(null); 
-        
-        // 2. 🚩 LIMPIEZA CLAVE: Borramos los datos físicos del navegador
-        localStorage.removeItem('userInfo');
-        localStorage.removeItem('wasAuthenticated'); // O ponlo en false si prefieres
+        await logout();
         
         toast.success('Sesión cerrada correctamente');
-        navigate('/', { replace: true });
+            navigate('/', { replace: true });
     } catch (error) {
         console.error('Error al cerrar sesión', error);
         toast.error('Error al cerrar sesión');
@@ -34,8 +26,6 @@ const UserDropDown = () => {
     // 🚩 Lógica para construir la URL del avatar
     const getAvatarSrc = () => {
         if (userInfo?.avatar) {
-            // Si ya es una URL completa (ej. Google), la usamos. 
-            // Si es relativa (/uploads/...), concatenamos la base.
             return userInfo.avatar.startsWith('http') 
                 ? userInfo.avatar 
                 : `${baseServerUrl}${userInfo.avatar}`;

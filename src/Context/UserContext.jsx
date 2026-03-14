@@ -1,46 +1,125 @@
-import { useState, useEffect, createContext } from 'react'
-import { getProfileService } from '../services/authServices'
+import { useState, useEffect, createContext, useCallback, useRef } from 'react'
+import { getProfileService, logoutService } from '../services/authServices'
+import { useBroadcastAuth } from '../Hooks/useBroadcastAuth';
+import toast from 'react-hot-toast';
 
 export const UserContext = createContext(null)
 
-export const UserContextProvider = ({ children }) => { 
-    const [userInfo, setUserInfo] = useState(null)
+export const UserContextProvider = ({ children }) => {
+    const [userInfo, setUserInfo] = useState(() => {
+        const saved = localStorage.getItem('userInfo');
+        return saved ? JSON.parse(saved) : null;
+    });
+    
     const [loading, setLoading] = useState(true)
+    const { notifyLogin, notifyLogout, onMessage } = useBroadcastAuth();
+    
+    const logoutRef = useRef(null);
 
-    const checkSession = async () => {
-        if (!localStorage.getItem('wasAuthenticated')) {
-            setLoading(false)
-            return
-        }
-        try {
-            setLoading(true)
-            const userData = await getProfileService()
-
-            if (userData) {
-                setUserInfo(userData)
-                localStorage.setItem('userInfo', JSON.stringify(userData))
-            } else {
-                // Si el servidor responde vacío, limpiamos
-                setUserInfo(null)
-                localStorage.removeItem('userInfo')
-                localStorage.removeItem('wasAuthenticated')
+    const logout = useCallback(async (shouldNotify = true) => {
+        // 🚨 Llamar al servicio de logout del backend
+        if (shouldNotify) {
+            try {
+                await logoutService();
+                console.log('✅ LogoutService ejecutado correctamente');
+            } catch (error) {
+                console.error('❌ Error en logoutService:', error);
             }
-        } catch (error) {
-            // Si hay un error (como token expirado), reseteamos el estado
-            setUserInfo(null)
-            localStorage.removeItem('wasAuthenticated')
-            console.warn("Sesión expirada o inválida");
-        } finally {
-            setLoading(false)
         }
-    }
-
-    const getUserId = () => userInfo?.id || null
-    const isAuthenticated = () => !!userInfo?.id
+        
+        setUserInfo(null);
+        localStorage.removeItem('userInfo');
+        localStorage.removeItem('wasAuthenticated');
+        
+        if (shouldNotify) {
+            notifyLogout();
+        }
+    }, [notifyLogout]);
 
     useEffect(() => {
-        checkSession()
-    }, [])
+        logoutRef.current = logout;
+    }, [logout]);
+
+    const checkSession = useCallback(async () => {
+        if (!localStorage.getItem('wasAuthenticated')) {
+            setUserInfo(null);
+            setLoading(false);
+            return;
+        }
+
+        try {
+            setLoading(true);
+            const userData = await getProfileService();
+            // ✅ Condición CORREGIDA
+            if (userData && userData.success === true && userData.data) {
+                setUserInfo(userData.data);
+                localStorage.setItem('userInfo', JSON.stringify(userData.data));
+            } else {
+                setUserInfo(null);
+                localStorage.removeItem('userInfo');
+                localStorage.removeItem('wasAuthenticated');
+            }
+        } catch (error) {
+            console.error("❌ Error en checkSession:", error);
+            
+            if (error.response?.status === 401) {
+                setUserInfo(null);
+                localStorage.removeItem('userInfo');
+                localStorage.removeItem('wasAuthenticated');
+            } else {
+                const localUserInfo = localStorage.getItem('userInfo');
+                if (localUserInfo) {
+                    setUserInfo(JSON.parse(localUserInfo));
+                }
+            }
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    const login = useCallback(async (userData) => {
+        localStorage.setItem('wasAuthenticated', 'true');
+        localStorage.setItem('userInfo', JSON.stringify(userData));
+        setUserInfo(userData);
+        notifyLogin(userData.id);
+    }, [notifyLogin]);
+
+    // Escuchar mensajes de otras pestañas
+    useEffect(() => {
+        onMessage((data) => {
+            console.log('📨 Mensaje broadcast:', data);
+            
+            if (data.type === 'LOGOUT') {
+                console.log('🔔 Logout detectado en otra pestaña');
+                toast('Has cerrado sesión en otra ventana', {
+                    duration: 3000,
+                    position: 'top-center',
+                    icon: '🔒'
+                });
+                if (logoutRef.current) {
+                    logoutRef.current(false);
+                }
+            }
+            
+            if (data.type === 'LOGIN') {
+                console.log('🔔 Login detectado en otra pestaña');
+                toast.success('Has iniciado sesión en otra ventana', {
+                    duration: 3000,
+                    position: 'top-center',
+                    icon: '🔓'
+                });
+                checkSession();
+            }
+        });
+    }, [onMessage, checkSession]);
+
+    // Verificación inicial al cargar la pestaña
+    useEffect(() => {
+        checkSession();
+    }, [checkSession]);
+
+    const getUserId = useCallback(() => userInfo?.id || null, [userInfo]);
+    const isAuthenticated = useCallback(() => !!userInfo?.id, [userInfo]);
 
     return (
         <UserContext.Provider
@@ -48,18 +127,13 @@ export const UserContextProvider = ({ children }) => {
                 userInfo,
                 setUserInfo,
                 loading,
-                checkSession,
                 getUserId,
                 isAuthenticated,
+                login,
+                logout,
             }}
         >
             {children}
-
-            {loading && (
-                <div className="fixed top-0 left-0 w-full h-1 bg-primary/20 z-[999]">
-                    <div className="h-full bg-primary animate-pulse w-1/3"></div>
-                </div>
-            )}
         </UserContext.Provider>
-    )
-}
+    );
+};

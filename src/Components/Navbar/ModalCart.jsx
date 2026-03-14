@@ -2,7 +2,7 @@ import { CgTrash } from 'react-icons/cg'
 import { FaMinus, FaPlus, FaShoppingBag } from 'react-icons/fa'
 import { useCart } from '../../Hooks/useCart.js'
 import { Link } from 'react-router'
-import { FiX, FiAlertTriangle } from 'react-icons/fi'
+import { FiX, FiAlertTriangle, FiImage } from 'react-icons/fi'
 import { useState } from 'react'
 
 // Componente de Confirmación interno
@@ -104,8 +104,7 @@ const ModalCart = () => {
     return (
         <>
             <div className="modal modal-open inset-0 overflow-hidden z-50">
-                <section className="modal-box max-w-3xl bg-gradient-to-br from-white to-purple-50/30 rounded-2xl shadow-2xl border border-purple-100">
-                    {/* Header */}
+                <section className="modal-box max-w-3xl bg-gradient-to-br from-white to-purple-50/30 rounded-2xl shadow-2xl border border-purple-100 overflow-y-auto max-h-[90vh]">                    {/* Header */}
                     <div className="flex justify-between items-center mb-6 pb-4 border-b border-purple-100">
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-purple-100 rounded-xl">
@@ -141,17 +140,36 @@ const ModalCart = () => {
                         </div>
                     ) : (
                         <>
-                            <div className="space-y-4 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
-                                {cart.map((item) => (
+                                    <div className="space-y-4 pr-2 custom-scrollbar">
+                                        {cart.map((item) => (
                                     <div
                                         key={item._id}
                                         className="flex items-center gap-4 p-3 bg-white rounded-xl shadow-sm border border-purple-50 hover:shadow-md transition-shadow"
                                     >
-                                        <img
-                                            className="w-20 h-20 object-cover rounded-xl"
-                                            src={item.imageUrl}
-                                            alt={item.name}
-                                        />
+                                    <div className="w-20 h-20 flex-shrink-0">
+                                        {item.imageUrl ? (
+                                            <img
+                                                className="w-full h-full object-cover rounded-xl"
+                                                src={item.imageUrl}
+                                                alt={item.name}
+                                                onError={(e) => {
+                                                    e.target.onerror = null;
+                                                    e.target.style.display = 'none';
+                                                    e.target.parentElement.innerHTML = `
+                                                        <div class="w-full h-full bg-gray-200 rounded-xl flex items-center justify-center">
+                                                            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                            </svg>
+                                                        </div>
+                                                    `;
+                                                }}
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full bg-gray-200 rounded-xl flex items-center justify-center">
+                                                <FiImage className="w-8 h-8 text-gray-400" />
+                                            </div>
+                                        )}
+                                    </div>
                                         
                                         <div className="flex-1">
                                             <div className="flex items-start justify-between mb-2">
@@ -164,7 +182,7 @@ const ModalCart = () => {
                                                     </p>
                                                 </div>
                                                 <span className="font-bold text-lg text-purple-700">
-                                                    ${item.price * item.quantity}
+                                                    ${(item.price * item.quantity).toFixed(2)}
                                                 </span>
                                             </div>
 
@@ -230,7 +248,7 @@ const ModalCart = () => {
 
                                 <div className="flex justify-between items-center text-2xl font-bold">
                                     <span className="text-gray-800">Total:</span>
-                                    <span className="text-purple-700">${total}</span>
+                                    <span className="text-purple-700">${total.toFixed(2)}</span>
                                 </div>
                             </div>
 

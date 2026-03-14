@@ -1,5 +1,5 @@
 import { Link } from 'react-router'
-import { FiEdit, FiTrash2, FiEye } from 'react-icons/fi'
+import { FiEdit, FiTrash2, FiEye} from 'react-icons/fi'
 import { useProduct } from '../../../Hooks/useProduct.js'
 import toast from 'react-hot-toast'
 

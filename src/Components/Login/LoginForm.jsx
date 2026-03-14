@@ -11,7 +11,7 @@ const LoginForm = () => {
         mode: 'onChange',
     })
 
-    const { setUserInfo } = useUser()
+    const { login } = useUser()  // 👈 CAMBIADO: usar login en lugar de setUserInfo
     const navigate = useNavigate()
     const location = useLocation()
     const [showPassword, setShowPassword] = useState(false)
@@ -25,7 +25,8 @@ const LoginForm = () => {
             const result = await loginService(data)
 
             if (result && result.success) {
-                await setUserInfo(result.user) 
+                // ✅ USAR LA FUNCIÓN login DEL CONTEXTO
+                login(result.user) 
                 
                 toast.success(result.message || '¡Bienvenido!')
                 reset()

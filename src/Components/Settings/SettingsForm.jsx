@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useUser } from '../../Hooks/useUser.js'
 import toast from 'react-hot-toast'
-import { updateUserService } from '../../services/userServices.js'
+import { updateProfileService } from '../../services/userServices' // ✅ Import correcto
 
 // 🚩 Limpiamos la URL para apuntar a la raíz (donde vive /uploads)
 const baseServerUrl = import.meta.env.VITE_BACKEND_URL.replace('/api', '');
@@ -61,7 +61,8 @@ const SettingsForm = () => {
     const onSubmit = async (data) => {
         setLoading(true);
         try {
-            const result = await updateUserService(data, selectedFile);
+            // ✅ CORREGIDO: usar updateProfileService en lugar de updateUserService
+            const result = await updateProfileService(data, selectedFile);
 
             if (result.success && result.user) {
                 // Actualizamos el contexto global
@@ -80,7 +81,8 @@ const SettingsForm = () => {
                 toast.error(result.message || "Error al actualizar");
             }
         } catch (error) {
-            toast.error("Error de conexión con el servidor");
+            console.error('Error en onSubmit:', error);
+            toast.error(error.message || "Error de conexión con el servidor");
         } finally {
             setLoading(false);
         }

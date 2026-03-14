@@ -3,7 +3,7 @@ import { useProduct } from '../../../Hooks/useProduct.js'
 import TableProducts from './TableProducts'
 import { useState, useEffect } from 'react'
 import axios from 'axios'
-import { FiFilter, FiPackage, FiGrid } from 'react-icons/fi'
+import { FiFilter, FiPackage, FiGrid, FiAlertCircle  } from 'react-icons/fi'
 
 const TableProductDashboard = () => {
     const {
@@ -161,9 +161,9 @@ const TableProductDashboard = () => {
                     </div>
                 </div>
 
-                {/* Alerta de categorías faltantes */}
-                {categories.length === 0 && !categoriesLoading && (
-                    <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3">
+                {/* Alerta de categorías faltantes - AHORA DENTRO DEL CONTAINER */}
+        {categories.length === 0 && !categoriesLoading && (
+            <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3">
                         <div className="p-2 bg-amber-100 rounded-lg">
                             <FiAlertCircle className="w-5 h-5 text-amber-600" />
                         </div>

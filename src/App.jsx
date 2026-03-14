@@ -21,9 +21,13 @@ import PaymentSuccess from './Pages/PaymentSuccess'
 import PaymentFailure from './Pages/PaymentFailure'
 import PaymentPending from './Pages/PaymentPending'
 
-// 👇 IMPORTA LAS NUEVAS PÁGINAS DE ERROR
+// 👇 PÁGINAS DE ERROR
 import NotFound from './Pages/NotFound'
 import ServerError from './Pages/ServerError'
+
+// 👇 NUEVAS PÁGINAS DE VERIFICACIÓN DE EMAIL
+import VerifyEmail from './Pages/VerifyEmail'
+import VerifyEmailPending from './Pages/VerifyEmailPending'
 
 function App() {
     return (
@@ -55,6 +59,10 @@ function App() {
                                 {/* ADMINISTRACIÓN */}
                                 <Route path="/admin/dashboard/*" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
                             </Route>
+
+                            {/* 👇 RUTAS DE VERIFICACIÓN DE EMAIL - FUERA DEL LAYOUT PRINCIPAL */}
+                            <Route path="/verify-email" element={<VerifyEmail />} />
+                            <Route path="/verify-email-pending" element={<VerifyEmailPending />} />
 
                             {/* 👇 RUTAS DE ERROR - VAN FUERA DEL LAYOUT PRINCIPAL */}
                             <Route path="/500" element={<ServerError />} />

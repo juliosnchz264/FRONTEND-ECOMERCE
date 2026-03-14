@@ -1,23 +1,32 @@
 import axios from 'axios'
 
-// Configuración base de axios para el carrito
 const API_URL = import.meta.env.VITE_BACKEND_URL + '/cart'
 
-// Configurar axios para incluir cookies en las peticiones
-axios.defaults.withCredentials = true
-
-const config = { withCredentials: true }; 
+// Configuración base para axios
+const axiosConfig = {
+    withCredentials: true,
+    headers: {
+        'Content-Type': 'application/json',
+    },
+}
 
 // Servicio para agregar producto al carrito
-export const addToCartService = async (userId, productId, quantity = 1) => {
+export const addToCartService = async (productId, quantity = 1) => {
     try {
-        const response = await axios.post(`${API_URL}/add`, {
-            userId,
-            productId,
-            quantity,
-        }, config)
+        console.log('📤 Enviando a:', API_URL)
+        console.log('📦 Datos:', { productId, quantity: Number(quantity) })
+
+        const response = await axios.post(
+            API_URL,
+            {
+                productId,
+                quantity: Number(quantity),
+            },
+            axiosConfig
+        )
         return response.data
     } catch (error) {
+        console.error('🔴 Error:', error.response?.data || error.message)
         throw new Error(
             error.response?.data?.message ||
                 'Error al agregar producto al carrito'
@@ -25,27 +34,33 @@ export const addToCartService = async (userId, productId, quantity = 1) => {
     }
 }
 
-// Servicio para obtener el carrito del usuario
-export const getCartService = async (userId) => {
+// Servicio para obtener el carrito
+export const getCartService = async () => {
     try {
-        const response = await axios.get(`${API_URL}/get/${userId}`, config)
+        const response = await axios.get(API_URL, axiosConfig)
         return response.data
     } catch (error) {
+        console.error('Error en getCartService:', error.response?.data || error.message)
         throw new Error(
             error.response?.data?.message || 'Error al obtener el carrito'
         )
     }
 }
 
-// Servicio para actualizar la cantidad de un producto en el carrito
-export const updateCartService = async (userId, productId, quantity) => {
+// Servicio para actualizar la cantidad de un producto
+export const updateCartService = async (productId, quantity) => {
     try {
-        const response = await axios.put(`${API_URL}/update/${userId}`, {
-            productId,
-            quantity,
-        }, config)
+        const response = await axios.put(
+            API_URL,
+            {
+                productId,
+                quantity: Number(quantity),
+            },
+            axiosConfig
+        )
         return response.data
     } catch (error) {
+        console.error('Error en updateCartService:', error.response?.data || error.message)
         throw new Error(
             error.response?.data?.message || 'Error al actualizar el carrito'
         )
@@ -53,15 +68,15 @@ export const updateCartService = async (userId, productId, quantity) => {
 }
 
 // Servicio para eliminar un producto del carrito
-export const removeFromCartService = async (userId, productId) => {
+export const removeFromCartService = async (productId) => {
     try {
-        const response = await axios.delete(
-            `${API_URL}/removeProduct/${userId}`,{
-            ...config,
+        const response = await axios.delete(`${API_URL}/product`, {
+            ...axiosConfig,
             data: { productId }
         })
         return response.data
     } catch (error) {
+        console.error('Error en removeFromCartService:', error.response?.data || error.message)
         throw new Error(
             error.response?.data?.message ||
                 'Error al eliminar producto del carrito'
@@ -70,11 +85,12 @@ export const removeFromCartService = async (userId, productId) => {
 }
 
 // Servicio para limpiar todo el carrito
-export const clearCartService = async (userId) => {
+export const clearCartService = async () => {
     try {
-        const response = await axios.delete(`${API_URL}/clear/${userId}`)
+        const response = await axios.delete(API_URL, axiosConfig)
         return response.data
     } catch (error) {
+        console.error('Error en clearCartService:', error.response?.data || error.message)
         throw new Error(
             error.response?.data?.message || 'Error al limpiar el carrito'
         )
@@ -82,14 +98,28 @@ export const clearCartService = async (userId) => {
 }
 
 // Servicio para obtener el total del carrito
-export const getCartTotalService = async (userId) => {
+export const getCartTotalService = async () => {
     try {
-        const response = await axios.get(`${API_URL}/total/${userId}`)
+        const response = await axios.get(`${API_URL}/total`, axiosConfig)
         return response.data
     } catch (error) {
+        console.error('Error en getCartTotalService:', error.response?.data || error.message)
         throw new Error(
             error.response?.data?.message ||
                 'Error al obtener el total del carrito'
+        )
+    }
+}
+
+// Servicio para fusionar carritos
+export const mergeCartsService = async () => {
+    try {
+        const response = await axios.post(`${API_URL}/merge`, {}, axiosConfig)
+        return response.data
+    } catch (error) {
+        console.error('Error en mergeCartsService:', error.response?.data || error.message)
+        throw new Error(
+            error.response?.data?.message || 'Error al fusionar carritos'
         )
     }
 }

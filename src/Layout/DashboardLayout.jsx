@@ -1,7 +1,7 @@
 import { Outlet, NavLink } from 'react-router'
 import { useEffect, useState } from 'react'
 import { useProduct } from '../Hooks/useProduct.js'
-import { FiGrid, FiFolder, FiLayers, FiMenu, FiX, FiHome } from 'react-icons/fi'
+import { FiGrid, FiFolder, FiLayers, FiMenu, FiX, FiHome, FiUsers } from 'react-icons/fi'  // 👈 Agregado FiUsers
 
 const DashboardLayout = () => {
     const { filterByCategory } = useProduct()
@@ -94,6 +94,15 @@ const DashboardLayout = () => {
                             <FiGrid className="w-5 h-5" />
                             Subcategorías
                         </NavLink>
+
+                        {/* 👇 NUEVO ENLACE A USUARIOS */}
+                        <NavLink
+                            to="/admin/dashboard/users"
+                            className={getNavLinkClass}
+                        >
+                            <FiUsers className="w-5 h-5" />
+                            Usuarios
+                        </NavLink>
                     </nav>
                 </div>
             </div>
@@ -152,6 +161,16 @@ const DashboardLayout = () => {
                             >
                                 <FiGrid className="w-5 h-5" />
                                 Subcategorías
+                            </NavLink>
+
+                            {/* 👇 NUEVO ENLACE A USUARIOS EN MÓVIL */}
+                            <NavLink
+                                to="/admin/dashboard/users"
+                                onClick={() => setIsMobileMenuOpen(false)}
+                                className={getMobileNavLinkClass}
+                            >
+                                <FiUsers className="w-5 h-5" />
+                                Usuarios
                             </NavLink>
 
                             <div className="border-t border-gray-200 my-2 pt-2">

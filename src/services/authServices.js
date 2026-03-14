@@ -3,15 +3,37 @@ import axios from 'axios'
 // Configuración base de axios para autenticación
 const API_URL = import.meta.env.VITE_BACKEND_URL + '/auth'
 
-// Para incluir la cookies en las peticiones globalmente
-axios.defaults.withCredentials = true
+const axiosConfig = {
+    withCredentials: true,
+    headers: {
+        'Content-Type': 'application/json',
+    },
+}
 
+// frontend/src/services/authServices.js
 export const getProfileService = async () => {
     try {
-        const response = await axios.get(`${API_URL}/profile`)
-        return response.data
+        const response = await axios.get(`${API_URL}/profile`, axiosConfig)        
+        // 🚨 Asegurar que devuelve la estructura correcta
+        return {
+            success: true,
+            data: response.data
+        }
     } catch (error) {
-        return null 
+        console.error('❌ Error obteniendo perfil:', {
+            status: error.response?.status,
+            message: error.message,
+            data: error.response?.data
+        });
+        
+        if (error.response?.status === 401) {
+            return {
+                success: false,
+                error: 'No autorizado'
+            }
+        }
+        
+        throw error;
     }
 }
 
@@ -38,29 +60,20 @@ export const loginService = async (data) => {
     }
 }
 
-// ✅ VERSIÓN CORREGIDA - Siempre devuelve la misma estructura
-export const registerService = async (data, reset, setRedirect, checkSession) => {
+// Versión simplificada (solo responsabilidad del servicio)
+export const registerService = async (userData) => {
     try {
-        const response = await axios.post(`${API_URL}/register`, data)
-
+        const response = await axios.post(`${API_URL}/register`, userData, axiosConfig)
+        
         if (response.status === 201) {
-            // Persistencia inmediata tras registro
-            localStorage.setItem('userInfo', JSON.stringify(response.data))
-            localStorage.setItem('wasAuthenticated', 'true')
-
-            await checkSession()
-            reset()
-            setRedirect(true)
-
-            // ✅ Siempre devolver con success: true
-            return { 
-                success: true, 
-                message: 'Registro exitoso',
-                data: response.data 
+            return {
+                success: true,
+                message: 'Registro exitoso. Por favor verifica tu email.',
+                data: response.data,
+                requiresVerification: response.data.requiresVerification || false
             }
         }
         
-        // ✅ Si llegamos aquí, algo salió mal con el status
         return { 
             success: false, 
             message: 'Error en el registro' 
@@ -68,7 +81,6 @@ export const registerService = async (data, reset, setRedirect, checkSession) =>
         
     } catch (error) {
         console.error('Error en registro:', error)
-        // ✅ Siempre devolver con success: false
         return { 
             success: false, 
             message: error.response?.data?.message || 'Error al registrarse' 

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { useNavigate } from 'react-router' // 👈 AÑADIDO
 import { FaEye, FaEyeSlash, FaUser, FaEnvelope, FaLock } from 'react-icons/fa'
 import { registerService } from '../../services/authServices'
 import { useUser } from '../../Hooks/useUser.js'
@@ -7,6 +8,7 @@ import { Navigate } from 'react-router'
 import toast from 'react-hot-toast'
 
 const RegisterForm = () => {
+    const navigate = useNavigate()
     const {
         register,
         handleSubmit,
@@ -17,7 +19,7 @@ const RegisterForm = () => {
         mode: 'onChange',
     })
 
-    const { userInfo, checkSession } = useUser()
+    const { userInfo } = useUser()
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -25,23 +27,38 @@ const RegisterForm = () => {
 
     const password = watch('password')
 
+    // ============================================
+    // HANDLE SUBMIT CORREGIDO
+    // ============================================
     const onSubmit = async (data) => {
         setIsSubmitting(true)
         try {
-            const result = await registerService(data, reset, setRedirect, checkSession)
-
-            if (result.message) {
-                toast.success('¡Registro exitoso! Bienvenido')
+            const response = await registerService(data)
+            
+            if (response.success) {
+                toast.success(response.message)
+                
+                if (response.requiresVerification) {
+                    navigate('/verify-email-pending', { 
+                        state: { email: data.email } 
+                    })
+                } else {
+                    // Auto-login solo si no requiere verificación
+                    await checkSession?.()
+                    reset()
+                    setRedirect(true)
+                }
             } else {
-                toast.error(result?.error || 'Error al registrarse')
+                toast.error(response.message)
             }
         } catch (error) {
-            toast.error('Error de conexión con el servidor')
+            toast.error('Error en el registro')
         } finally {
             setIsSubmitting(false)
         }
     }
 
+    // Si ya está autenticado, redirigir
     if (redirect && userInfo?.isAdmin) {
         return <Navigate to="/admin/dashboard/products" replace />
     }
