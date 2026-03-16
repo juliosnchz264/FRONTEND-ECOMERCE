@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://192.168.1.41:3001/api',
+  baseURL: 'http://192.168.0.117:3001/api',
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
@@ -31,15 +31,20 @@ api.interceptors.response.use(
       originalRequest.url.includes(route)
     );
     
+    // No redirigir si es una petición que esperamos que falle (como check-session)
+    const isAuthCheck = originalRequest.url.includes('/auth/check-session');
+    
     if (error.response) {
       switch (error.response.status) {
         case 401:
-          if (!isPublicRoute && !originalRequest.url.includes('/auth/refresh')) {
+          // Solo redirigir si NO es ruta pública y NO es check de autenticación
+          if (!isPublicRoute && !isAuthCheck && !originalRequest.url.includes('/auth/refresh')) {
             console.log('🚫 No autorizado, redirigiendo a login...');
-            // Limpiar antes de redirigir
             localStorage.removeItem('userInfo');
             localStorage.removeItem('wasAuthenticated');
             window.location.href = '/login';
+          } else {
+            console.log('ℹ️ 401 ignorado (ruta pública o check de auth):', originalRequest.url);
           }
           break;
         case 403:

@@ -10,34 +10,43 @@ export const useBroadcastAuth = () => {
         const channel = new BroadcastChannel(BROADCAST_CHANNEL);
         channelRef.current = channel;
 
+        console.log('📻 BroadcastChannel creado:', BROADCAST_CHANNEL);
+
         return () => {
+            console.log('📻 BroadcastChannel cerrado');
             channel.close();
             channelRef.current = null;
         };
     }, []);
 
-    const notifyLogin = useCallback((userId) => {
+    const notifyLogin = useCallback((userData, token) => {
         if (channelRef.current) {
-            channelRef.current.postMessage({
+            const message = {
                 type: 'LOGIN',
-                userId,
+                user: userData,
+                token: token,  // 👈 incluir token
                 timestamp: Date.now()
-            });
+            };
+            channelRef.current.postMessage(message);
+            console.log('📤 Broadcast - Login enviado:', message);
         }
     }, []);
 
     const notifyLogout = useCallback(() => {
         if (channelRef.current) {
-            channelRef.current.postMessage({
+            const message = {
                 type: 'LOGOUT',
                 timestamp: Date.now()
-            });
+            };
+            channelRef.current.postMessage(message);
+            console.log('📤 Broadcast - Logout enviado:', message);
         }
     }, []);
 
     const onMessage = useCallback((callback) => {
         if (channelRef.current) {
             channelRef.current.onmessage = (event) => {
+                console.log('📥 Broadcast - Mensaje recibido:', event.data);
                 callback(event.data);
             };
         }

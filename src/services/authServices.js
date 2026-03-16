@@ -59,12 +59,16 @@ const dispatchTokenEvent = (token) => {
  */
 export const setAccessToken = (token) => {
     const oldToken = accessToken;
-    accessToken = token;
     
-    if (oldToken !== token) {
-        console.log('🔄 Token actualizado, notificando a los listeners');
-        dispatchTokenEvent(token);
+    // Si el token es el mismo, no notificar
+    if (oldToken === token) {
+        console.log('⏭️ Mismo token, no se notifica');
+        return;
     }
+    
+    accessToken = token;
+    console.log('🔄 Token actualizado, notificando a los listeners');
+    dispatchTokenEvent(token);
 };
 
 /**
@@ -222,11 +226,6 @@ export const checkSessionService = async () => {
         const response = await api.get('/auth/check-session');
         
         console.log('✅ Sesión válida para:', response.data.user?.email);
-        
-        // Actualizar access token en memoria si viene en la respuesta
-        if (response.data.accessToken) {
-            setAccessToken(response.data.accessToken);
-        }
         
         return {
             success: true,

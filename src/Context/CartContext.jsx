@@ -62,7 +62,7 @@ export const CartContextProvider = ({ children }) => {
     // ===== CONFIGURAR BROADCAST CHANNEL PARA SINCRONIZACIÓN ENTRE PESTAÑAS =====
     useEffect(() => {
         if (typeof window !== 'undefined') {
-            const channel = new BroadcastChannel('cart_sync_channel')
+            const channel = new BroadcastChannel('ecommerce_cart_broadcast')
             broadcastChannelRef.current = channel
 
             channel.onmessage = (event) => {
@@ -70,31 +70,24 @@ export const CartContextProvider = ({ children }) => {
 
                 if (source === window.location.href) return
 
-                if (lastUpdateRef.current === timestamp) {
+                // 🚩 MEJORA: Si el socket está conectado, ignoramos el Broadcast
+                // porque el servidor ya nos enviará la verdad absoluta.
+                if (connected) {
                     console.log(
-                        '⏭️ Actualización BroadcastChannel duplicada ignorada',
+                        '⏭️ Ignorando Broadcast porque Socket.IO está activo',
                     )
                     return
                 }
 
+                if (lastUpdateRef.current === timestamp) return
+
                 if (type === 'CART_UPDATED') {
                     console.log(
-                        '📻 Recibida actualización vía BroadcastChannel:',
-                        remoteCart,
+                        '📻 Sincronizando vía Broadcast (Modo Invitado/Offline)',
                     )
                     setCart(remoteCart)
-
-                    try {
-                        localStorage.setItem('cart', JSON.stringify(remoteCart))
-                    } catch (e) {
-                        console.error('Error guardando en localStorage:', e)
-                    }
-
+                    saveLocalCart(remoteCart)
                     lastUpdateRef.current = timestamp
-
-                    if (source !== window.location.href) {
-                        toast.success('Carrito actualizado en otra pestaña')
-                    }
                 }
             }
 
@@ -176,7 +169,7 @@ export const CartContextProvider = ({ children }) => {
     const loadCart = useCallback(
         async (skipCache = false) => {
             // 🟢 ELIMINADO: if (loading && !skipCache) return;
-            
+
             if (isAuthenticated()) {
                 try {
                     setLoading(true)
@@ -195,10 +188,13 @@ export const CartContextProvider = ({ children }) => {
 
                     if (isMountedRef.current) {
                         setCart(cartItems)
-                        
+
                         // Sincronizar localStorage
                         if (cartItems.length > 0) {
-                            localStorage.setItem('cart', JSON.stringify(cartItems))
+                            localStorage.setItem(
+                                'cart',
+                                JSON.stringify(cartItems),
+                            )
                         } else {
                             localStorage.removeItem('cart')
                         }
@@ -233,57 +229,115 @@ export const CartContextProvider = ({ children }) => {
     const syncCartWithBackend = useCallback(async () => {
         const localCart = loadLocalCart()
 
+        // Solo sincronizar si hay algo local y el usuario está autenticado
         if (localCart.length > 0 && isAuthenticated() && !syncInProgress) {
-            retryCountRef.current = 0
             setSyncInProgress(true)
-            
             try {
                 setLoading(true)
-                
-                // OBTENER CARRITO ACTUAL DEL BACKEND
-                const backendResponse = await getCartService()
-                const backendProducts = backendResponse.cart?.products || []
-                
-                // 🟢 CASO 1: El backend está vacío - sincronizar productos locales
-                if (backendProducts.length === 0) {
-                    console.log('➕ Backend vacío, sincronizando productos locales...')
-                    
-                    for (const item of localCart) {
-                        try {
-                            await addToCartService(item._id, item.quantity)
-                            console.log(`   ✅ Producto ${item._id} agregado (${item.quantity})`)
-                        } catch (error) {
-                            console.error(`   ❌ Error con producto ${item._id}:`, error)
-                        }
-                    }
-                    
-                    localStorage.removeItem('cart')
-                    await loadCart(true)
-                    toast.success('Carrito sincronizado correctamente')
-                } 
-                // 🟢 CASO 2: El backend YA TIENE productos - IGNORAR localStorage
-                else {
-                    console.log('⚠️ Backend ya tiene productos. IGNORANDO localStorage');
-                    console.log(`   Backend: ${backendProducts.length} productos`);
-                    console.log(`   Local: ${localCart.length} productos (DESCARTADOS)`);
-                    
-                    localStorage.removeItem('cart')
-                    await loadCart(true)
-                    toast.success('Carrito sincronizado con el servidor')
+                console.log(
+                    '🔄 Iniciando fusión de carrito local con servidor...',
+                )
+
+                // En lugar de elegir CASO 1 o CASO 2, FUSIONAMOS siempre
+                for (const item of localCart) {
+                    await addToCartService(item._id, item.quantity)
                 }
-                
+
+                // Una vez subido todo, limpiamos local
+                localStorage.removeItem('cart')
+
+                // Recargamos el carrito final del backend
+                const finalCart = await loadCart(true)
+
+                // 🚀 ESTO ES LO QUE ARREGLA EL CONFLICTO MULTI-DISPOSITIVO:
+                // Si el socket ya conectó, avisamos a todos los demás dispositivos
+                if (connected && finalCart) {
+                    const response = await getCartService()
+                    emitUpdate(response.cart)
+                    console.log(
+                        '📤 Cambio global emitido tras fusión post-login',
+                    )
+                }
+
+                toast.success('Carrito sincronizado y recuperado')
             } catch (error) {
-                console.error('Error al sincronizar:', error)
-                toast.error('Error al sincronizar el carrito')
+                console.error('❌ Error en la sincronización:', error)
             } finally {
-                if (isMountedRef.current) {
-                    setLoading(false)
-                    setSyncInProgress(false)
-                }
+                setSyncInProgress(false)
+                setLoading(false)
             }
         }
-    }, [isAuthenticated, loadLocalCart, loadCart, syncInProgress])
-    
+    }, [
+        isAuthenticated,
+        loadLocalCart,
+        loadCart,
+        connected,
+        emitUpdate,
+        syncInProgress,
+    ])
+
+    // 2. CORRECCIÓN DEL LOG DE ESTADO (Para que no sea molesto)
+    useEffect(() => {
+        if (connected) {
+            console.log(
+                '🟢 Conectado: Sincronización Real-time activa (Socket.IO)',
+            )
+        } else {
+            // Solo mostrar si no estamos cargando el usuario, para evitar ruido innecesario
+            if (!userLoading) {
+                console.log(
+                    '🟡 Pendiente: Usando respaldo entre pestañas (BroadcastChannel)',
+                )
+            }
+        }
+    }, [connected, userLoading])
+
+    // 3. ACTUALIZAR EL useEffect de inicialización para que la lógica de fusión sea sólida
+    useEffect(() => {
+        isMountedRef.current = true
+        if (userLoading) return
+
+        const initCart = async () => {
+            if (initialLoadDoneRef.current) return
+
+            if (isAuthenticated()) {
+                // 1. Cargamos primero lo que dice el servidor
+                const backendCart = await loadCart(true)
+                const localCart = loadLocalCart()
+
+                // 2. ¿Hay conflicto? (Hay cosas en local Y en el backend)
+                if (localCart.length > 0) {
+                    if (backendCart && backendCart.length > 0) {
+                        // ESTRATEGIA: Si el backend ya tiene datos, asumimos que
+                        // lo local es "basura" o ya fue sincronizado por otra pestaña.
+                        console.log(
+                            '🧹 Limpiando localCart redundante (el servidor ya tiene datos)',
+                        )
+                        localStorage.removeItem('cart')
+                    } else {
+                        // Si el backend está vacío pero hay local, sincronizamos
+                        console.log('🔄 Sincronizando carrito local único...')
+                        await syncCartWithBackend()
+                    }
+                }
+            } else {
+                setCart(loadLocalCart())
+                setLoading(false)
+            }
+            initialLoadDoneRef.current = true
+        }
+
+        initCart()
+        return () => {
+            isMountedRef.current = false
+        }
+    }, [
+        isAuthenticated,
+        userLoading,
+        loadCart,
+        loadLocalCart,
+        syncCartWithBackend,
+    ])
     // Manejo de cambios de autenticación - VERSIÓN CORREGIDA
     useEffect(() => {
         isMountedRef.current = true
@@ -296,25 +350,31 @@ export const CartContextProvider = ({ children }) => {
             if (isAuthenticated()) {
                 // 🟢 PRIMERO: Cargar del backend
                 const backendCart = await loadCart()
-                
+
                 // 🟢 SOLO si el backend está vacío, verificar localStorage
                 if (backendCart && backendCart.length === 0) {
                     const localCart = loadLocalCart()
-                    
+
                     // Si hay productos locales Y no hay sync en progreso
                     if (localCart.length > 0 && !syncInProgress) {
-                        console.log('⚠️ Backend vacío con productos locales detectado:', localCart.length)
-                        
+                        console.log(
+                            '⚠️ Backend vacío con productos locales detectado:',
+                            localCart.length,
+                        )
+
                         // 🟢 AHORA SÍ USAMOS syncCartWithBackend
                         await syncCartWithBackend()
                     }
                 }
-                
+
                 // 🟢 Si el backend ya tiene productos, todo bien
                 else if (backendCart && backendCart.length > 0) {
-                    console.log('✅ Carrito del backend cargado:', backendCart.length, 'productos')
+                    console.log(
+                        '✅ Carrito del backend cargado:',
+                        backendCart.length,
+                        'productos',
+                    )
                 }
-                
             } else {
                 // Usuario no autenticado
                 setCart(loadLocalCart())
@@ -447,7 +507,15 @@ export const CartContextProvider = ({ children }) => {
                 })
             }
         },
-        [isAuthenticated, loadCart, connected, emitUpdate, cart, saveLocalCart, broadcastUpdate],
+        [
+            isAuthenticated,
+            loadCart,
+            connected,
+            emitUpdate,
+            cart,
+            saveLocalCart,
+            broadcastUpdate,
+        ],
     )
 
     const removeFromCart = useCallback(
@@ -465,7 +533,7 @@ export const CartContextProvider = ({ children }) => {
 
                     // 🟢 Cerrar modal después de eliminar
                     closeModal()
-                    
+
                     toast.success('Producto eliminado del carrito')
                 } catch (error) {
                     console.error('Error al eliminar producto:', error)
@@ -480,10 +548,10 @@ export const CartContextProvider = ({ children }) => {
                     )
                     saveLocalCart(newCart)
                     broadcastUpdate(newCart)
-                    
+
                     // 🟢 Cerrar modal para usuarios no autenticados también
                     closeModal()
-                    
+
                     return newCart
                 })
                 toast.success('Producto eliminado del carrito')

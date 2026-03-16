@@ -7,7 +7,12 @@ import { useUser } from '../../Hooks/useUser.js'
 import toast from 'react-hot-toast'
 
 const LoginForm = () => {
-    const { register, handleSubmit, formState: { errors }, reset } = useForm({
+    const {
+        register,
+        handleSubmit,
+        formState: { errors },
+        reset,
+    } = useForm({
         mode: 'onChange',
     })
 
@@ -22,23 +27,28 @@ const LoginForm = () => {
     const onSubmit = async (data) => {
         try {
             setIsSubmitting(true)
-            // 🟢 CORREGIDO: Pasar email y password como parámetros separados
             const result = await loginService(data.email, data.password)
 
             if (result && result.success) {
-                login(result.user) 
-                
+                // 🟢 Pasamos tanto el usuario como el token al contexto
+                login(result.user, result.accessToken)
+
                 toast.success(result.message || '¡Bienvenido!')
                 reset()
 
-                const destination = from || (result.user.isAdmin ? '/admin/dashboard/products' : '/')
+                const destination =
+                    from ||
+                    (result.user.isAdmin ? '/admin/dashboard/products' : '/')
                 navigate(destination, { replace: true })
             } else {
                 toast.error(result?.message || 'Credenciales incorrectas')
             }
         } catch (error) {
-            console.error("Error en login form:", error)
-            toast.error('Error de conexión con el servidor')
+            const errorMsg =
+                error.response?.data?.message ||
+                'Error de conexión con el servidor'
+            toast.error(errorMsg)
+            console.error('Error en login form:', error)
         } finally {
             setIsSubmitting(false)
         }
@@ -61,11 +71,11 @@ const LoginForm = () => {
                             pattern: {
                                 value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
                                 message: 'Correo electrónico inválido',
-                            }
+                            },
                         })}
                         className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all ${
-                            errors.email 
-                                ? 'border-red-300 focus:ring-red-200 focus:border-red-500' 
+                            errors.email
+                                ? 'border-red-300 focus:ring-red-200 focus:border-red-500'
                                 : 'border-gray-300 focus:ring-purple-200 focus:border-purple-500'
                         }`}
                         placeholder="tu@email.com"
@@ -86,7 +96,7 @@ const LoginForm = () => {
                     <label className="block text-sm font-medium text-gray-700">
                         Contraseña
                     </label>
-                    <button 
+                    <button
                         type="button"
                         className="text-sm text-purple-600 hover:text-purple-700 hover:underline"
                     >
@@ -100,11 +110,14 @@ const LoginForm = () => {
                     <input
                         {...register('password', {
                             required: 'La contraseña es requerida',
-                            minLength: { value: 6, message: 'Mínimo 6 caracteres' }
+                            minLength: {
+                                value: 6,
+                                message: 'Mínimo 6 caracteres',
+                            },
                         })}
                         className={`w-full pl-10 pr-12 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all ${
-                            errors.password 
-                                ? 'border-red-300 focus:ring-red-200 focus:border-red-500' 
+                            errors.password
+                                ? 'border-red-300 focus:ring-red-200 focus:border-red-500'
                                 : 'border-gray-300 focus:ring-purple-200 focus:border-purple-500'
                         }`}
                         placeholder="••••••••"
@@ -115,7 +128,11 @@ const LoginForm = () => {
                         type="button"
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-purple-600 transition-colors"
                     >
-                        {showPassword ? <FaEyeSlash size={20} /> : <FaEye size={20} />}
+                        {showPassword ? (
+                            <FaEyeSlash size={20} />
+                        ) : (
+                            <FaEye size={20} />
+                        )}
                     </button>
                 </div>
                 {errors.password && (
@@ -127,7 +144,7 @@ const LoginForm = () => {
             </div>
 
             {/* Botón de submit */}
-            <button 
+            <button
                 disabled={isSubmitting}
                 className={`w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-semibold rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all transform hover:-translate-y-0.5 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 ${
                     isSubmitting ? 'opacity-75 cursor-not-allowed' : ''

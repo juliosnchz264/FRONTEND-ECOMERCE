@@ -1,6 +1,6 @@
 // frontend/src/Context/UserContext.jsx
 import { useState, useEffect, createContext, useCallback, useRef } from 'react'
-import { getProfileService, logoutService, checkSessionService } from '../services/authServices'
+import { getProfileService, logoutService, checkSessionService, setAccessToken } from '../services/authServices' // 👈 importar setAccessToken
 import { useBroadcastAuth } from '../Hooks/useBroadcastAuth';
 import toast from 'react-hot-toast';
 
@@ -16,10 +16,9 @@ export const UserContextProvider = ({ children }) => {
     const { notifyLogin, notifyLogout, onMessage } = useBroadcastAuth();
     
     const logoutRef = useRef(null);
-    const checkSessionTimeoutRef = useRef(null); // 🟢 Para evitar múltiples llamadas
+    const checkSessionTimeoutRef = useRef(null);
 
     const logout = useCallback(async (shouldNotify = true) => {
-        // 🚨 Llamar al servicio de logout del backend
         if (shouldNotify) {
             try {
                 await logoutService();
@@ -72,7 +71,6 @@ export const UserContextProvider = ({ children }) => {
                 }
             } catch (error) {
                 console.error('❌ Error en checkSession:', error);
-                // En caso de error, mantener la sesión actual
             } finally {
                 setLoading(false);
                 checkSessionTimeoutRef.current = null;
@@ -80,17 +78,20 @@ export const UserContextProvider = ({ children }) => {
         }, 300);
     }, [userInfo]);
 
-    const login = useCallback(async (userData) => {
+    const login = useCallback(async (userData, token) => { // 👈 aceptar token
+        console.log("👀 Estructura de userData:", userData);
         localStorage.setItem('wasAuthenticated', 'true');
         localStorage.setItem('userInfo', JSON.stringify(userData));
         setUserInfo(userData);
-        notifyLogin(userData.id);
+        notifyLogin(userData, token); // 👈 pasar token
         toast.success(`¡Bienvenido, ${userData.name || 'usuario'}!`);
     }, [notifyLogin]);
 
     // Escuchar mensajes de otras pestañas
     useEffect(() => {
         onMessage((data) => {            
+            console.log('📻 Broadcast - Mensaje recibido:', data);
+            
             if (data.type === 'LOGOUT') {
                 console.log('🔒 Logout detectado en otra pestaña');
                 toast('Has cerrado sesión en otra ventana', {
@@ -105,12 +106,27 @@ export const UserContextProvider = ({ children }) => {
             
             if (data.type === 'LOGIN') {
                 console.log('🔓 Login detectado en otra pestaña');
-                toast.success('Has iniciado sesión en otra ventana', {
-                    duration: 3000,
-                    position: 'top-center',
-                    icon: '🔓'
-                });
-                checkSession();
+                console.log('   Usuario:', data.user);
+                
+                if (data.user) {
+                    setUserInfo(data.user);
+                    localStorage.setItem('userInfo', JSON.stringify(data.user));
+                    localStorage.setItem('wasAuthenticated', 'true');
+                    
+                    // 🟢 Si el token viene en el mensaje, guardarlo en memoria
+                    if (data.token) {
+                        setAccessToken(data.token); // esto dispara token-changed
+                    }
+                    
+                    toast.success(`Has iniciado sesión en otra ventana como ${data.user.email}`, {
+                        duration: 3000,
+                        position: 'top-center',
+                        icon: '🔓'
+                    });
+                } else {
+                    // Fallback: si no hay datos completos, hacer checkSession
+                    checkSession();
+                }
             }
         });
         
@@ -119,13 +135,12 @@ export const UserContextProvider = ({ children }) => {
                 clearTimeout(checkSessionTimeoutRef.current);
             }
         };
-    }, [onMessage, checkSession]);
+    }, [onMessage, checkSession, logoutRef]);
 
     // Verificación inicial al cargar la pestaña
     useEffect(() => {
         checkSession();
         
-        // 🟢 Verificar periódicamente la sesión (cada 5 minutos)
         const interval = setInterval(checkSession, 5 * 60 * 1000);
         
         return () => {
