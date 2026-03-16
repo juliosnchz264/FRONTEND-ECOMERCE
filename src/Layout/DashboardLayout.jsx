@@ -1,37 +1,48 @@
 import { Outlet, NavLink } from 'react-router'
 import { useEffect, useState } from 'react'
 import { useProduct } from '../Hooks/useProduct.js'
-import { FiGrid, FiFolder, FiLayers, FiMenu, FiX, FiHome, FiUsers } from 'react-icons/fi'  // 👈 Agregado FiUsers
+import Navbar from '../Components/Navbar/Navbar' // 👈 IMPORTAR EL NAVBAR
+import {
+    FiGrid,
+    FiFolder,
+    FiLayers,
+    FiMenu,
+    FiX,
+    FiHome,
+    FiUsers,
+} from 'react-icons/fi'
 
 const DashboardLayout = () => {
     const { filterByCategory } = useProduct()
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-    
+
     useEffect(() => {
-        console.log('🔄 DashboardLayout: Reseteando filtros a Todos');
-        filterByCategory('Todos', null);
-    }, [filterByCategory]);
+        filterByCategory('Todos', null)
+    }, [filterByCategory])
 
     const getNavLinkClass = ({ isActive }) => {
         return `flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all duration-200 ${
-            isActive 
-                ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-200' 
+            isActive
+                ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-200'
                 : 'text-gray-600 hover:bg-purple-50 hover:text-purple-600'
         }`
     }
 
     const getMobileNavLinkClass = ({ isActive }) => {
         return `flex items-center gap-3 px-4 py-3 rounded-xl w-full text-left transition-colors ${
-            isActive 
-                ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white' 
+            isActive
+                ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white'
                 : 'text-gray-600 hover:bg-purple-50'
         }`
     }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
-            {/* Header con gradiente */}
-            <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white">
+            {/* 🚨 NAVBAR SUPERIOR (mismo que en Layout) */}
+            <Navbar />
+
+            {/* Header con gradiente para el dashboard */}
+            <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white mt-2">
                 <div className="container mx-auto px-4">
                     <div className="flex items-center justify-between h-20">
                         {/* Espacio izquierdo para balance */}
@@ -42,14 +53,18 @@ const DashboardLayout = () => {
                             <div className="p-2 bg-white/20 rounded-xl">
                                 <FiGrid className="w-6 h-6" />
                             </div>
-                            <h1 className="text-xl font-bold">Panel de Administración</h1>
+                            <h1 className="text-xl font-bold">
+                                Panel de Administración
+                            </h1>
                         </div>
 
                         {/* Botón menú móvil y espacio derecho */}
                         <div className="flex items-center gap-4">
                             {/* Botón menú móvil */}
                             <button
-                                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                                onClick={() =>
+                                    setIsMobileMenuOpen(!isMobileMenuOpen)
+                                }
                                 className="md:hidden p-2 hover:bg-white/10 rounded-xl transition-colors"
                             >
                                 {isMobileMenuOpen ? (
@@ -58,7 +73,7 @@ const DashboardLayout = () => {
                                     <FiMenu className="w-6 h-6" />
                                 )}
                             </button>
-                            
+
                             {/* Espacio para balance en desktop */}
                             <div className="hidden md:block w-32"></div>
                         </div>
@@ -78,7 +93,7 @@ const DashboardLayout = () => {
                             <FiFolder className="w-5 h-5" />
                             Productos
                         </NavLink>
-                        
+
                         <NavLink
                             to="/admin/dashboard/categories"
                             className={getNavLinkClass}
@@ -86,7 +101,7 @@ const DashboardLayout = () => {
                             <FiLayers className="w-5 h-5" />
                             Categorías
                         </NavLink>
-                        
+
                         <NavLink
                             to="/admin/dashboard/subcategories"
                             className={getNavLinkClass}
@@ -95,7 +110,6 @@ const DashboardLayout = () => {
                             Subcategorías
                         </NavLink>
 
-                        {/* 👇 NUEVO ENLACE A USUARIOS */}
                         <NavLink
                             to="/admin/dashboard/users"
                             className={getNavLinkClass}
@@ -108,8 +122,8 @@ const DashboardLayout = () => {
             </div>
 
             {/* Enlace a tienda flotante */}
-            <NavLink 
-                to="/" 
+            <NavLink
+                to="/"
                 className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-full shadow-lg hover:bg-purple-700 transition-all hover:scale-105"
             >
                 <FiHome className="w-5 h-5" />
@@ -122,7 +136,9 @@ const DashboardLayout = () => {
                     <div className="absolute right-0 top-0 h-full w-64 bg-white shadow-2xl">
                         <div className="p-4 border-b border-gray-200">
                             <div className="flex items-center justify-between">
-                                <h2 className="font-semibold text-gray-800">Menú</h2>
+                                <h2 className="font-semibold text-gray-800">
+                                    Menú
+                                </h2>
                                 <button
                                     onClick={() => setIsMobileMenuOpen(false)}
                                     className="p-2 hover:bg-gray-100 rounded-lg"
@@ -131,7 +147,7 @@ const DashboardLayout = () => {
                                 </button>
                             </div>
                         </div>
-                        
+
                         <nav className="p-2">
                             <NavLink
                                 to="/admin/dashboard/products"
@@ -144,7 +160,7 @@ const DashboardLayout = () => {
                                 <FiFolder className="w-5 h-5" />
                                 Productos
                             </NavLink>
-                            
+
                             <NavLink
                                 to="/admin/dashboard/categories"
                                 onClick={() => setIsMobileMenuOpen(false)}
@@ -153,7 +169,7 @@ const DashboardLayout = () => {
                                 <FiLayers className="w-5 h-5" />
                                 Categorías
                             </NavLink>
-                            
+
                             <NavLink
                                 to="/admin/dashboard/subcategories"
                                 onClick={() => setIsMobileMenuOpen(false)}
@@ -163,7 +179,6 @@ const DashboardLayout = () => {
                                 Subcategorías
                             </NavLink>
 
-                            {/* 👇 NUEVO ENLACE A USUARIOS EN MÓVIL */}
                             <NavLink
                                 to="/admin/dashboard/users"
                                 onClick={() => setIsMobileMenuOpen(false)}
@@ -187,7 +202,7 @@ const DashboardLayout = () => {
                     </div>
                 </div>
             )}
-            
+
             {/* Contenido principal */}
             <div className="container mx-auto p-6">
                 <Outlet />

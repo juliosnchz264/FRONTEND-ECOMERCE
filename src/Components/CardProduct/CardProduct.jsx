@@ -1,7 +1,7 @@
 import { Link } from 'react-router'
 import { useCart } from '../../Hooks/useCart.js'
 import { FaShoppingCart, FaEye, FaStar } from 'react-icons/fa'
-import { useState } from 'react'
+import { useState, useCallback, useRef } from 'react'  // 👈 Añadir useRef
 import { FiImage } from 'react-icons/fi'
 import { BsLightningCharge } from 'react-icons/bs'
 
@@ -11,11 +11,42 @@ const CardProduct = ({
     const { addToCart, loading, openModal } = useCart()
     const [imageLoaded, setImageLoaded] = useState(false)
     const [imageError, setImageError] = useState(false)
+    const [isAdding, setIsAdding] = useState(false)  // 👈 Estado local para prevenir múltiples clics
+    const clickTimeoutRef = useRef(null)  // 👈 Referencia para timeout
 
-    const handleAddToCart = async () => {
-        await addToCart({ _id, name, price, imageUrl, description, stock })
-        openModal()
-    }
+    const handleAddToCart = useCallback(async () => {
+        // 🟢 Prevenir si ya está agregando
+        if (isAdding) {
+            console.log('⏳ Ya está agregando, ignorando clic')
+            return
+        }
+
+        // 🟢 Prevenir si no hay stock
+        if (stock === 0) {
+            return
+        }
+
+        setIsAdding(true)
+        
+        try {
+            await addToCart({ _id, name, price, imageUrl, description, stock })
+            openModal()
+            
+            // Resetear después de 1.5 segundos
+            if (clickTimeoutRef.current) {
+                clearTimeout(clickTimeoutRef.current)
+            }
+            
+            clickTimeoutRef.current = setTimeout(() => {
+                setIsAdding(false)
+                clickTimeoutRef.current = null
+            }, 1500)
+            
+        } catch (error) {
+            console.error('Error al agregar:', error)
+            setIsAdding(false)
+        }
+    }, [_id, name, price, imageUrl, description, stock, addToCart, openModal, isAdding])
 
     // Función para optimizar imágenes de Cloudinary
     const getOptimizedImage = (url) => {
@@ -27,6 +58,15 @@ const CardProduct = ({
     }
 
     const optimizedImage = getOptimizedImage(imageUrl)
+
+    // Limpiar timeout al desmontar
+    useState(() => {
+        return () => {
+            if (clickTimeoutRef.current) {
+                clearTimeout(clickTimeoutRef.current)
+            }
+        }
+    }, [])
 
     return (
         <div className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-purple-100 hover:border-purple-300">
@@ -105,13 +145,28 @@ const CardProduct = ({
                         <FaEye className="w-4 h-4" />
                         <span>Ver</span>
                     </Link>
+                    
+                    {/* 🟢 Botón mejorado con estado local */}
                     <button
                         onClick={handleAddToCart}
-                        disabled={loading || stock === 0}
-                        className="btn btn-success btn-sm md:btn-md bg-gradient-to-r from-green-500 to-green-600 border-0 hover:from-green-600 hover:to-green-700 disabled:from-gray-300 disabled:to-gray-400 transition-all flex items-center justify-center gap-1"
+                        disabled={loading || stock === 0 || isAdding}  // 👈 Deshabilitar también si isAdding=true
+                        className={`btn btn-sm md:btn-md transition-all flex items-center justify-center gap-1 ${
+                            isAdding 
+                                ? 'btn-disabled bg-gray-400 cursor-not-allowed' 
+                                : stock === 0 
+                                    ? 'btn-disabled bg-gray-400' 
+                                    : 'btn-success bg-gradient-to-r from-green-500 to-green-600 border-0 hover:from-green-600 hover:to-green-700'
+                        }`}
                     >
-                        <FaShoppingCart className="w-4 h-4" />
-                        <span>{stock === 0 ? 'Sin stock' : 'Agregar'}</span>
+                        <FaShoppingCart className={`w-4 h-4 ${isAdding ? 'animate-pulse' : ''}`} />
+                        <span>
+                            {isAdding 
+                                ? 'Agregando...' 
+                                : stock === 0 
+                                    ? 'Sin stock' 
+                                    : 'Agregar'
+                            }
+                        </span>
                     </button>
                 </div>
                 

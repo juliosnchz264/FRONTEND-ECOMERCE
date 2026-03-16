@@ -20,14 +20,13 @@ import Checkout from './Pages/Checkout'
 import PaymentSuccess from './Pages/PaymentSuccess'
 import PaymentFailure from './Pages/PaymentFailure'
 import PaymentPending from './Pages/PaymentPending'
-
-// 👇 PÁGINAS DE ERROR
 import NotFound from './Pages/NotFound'
 import ServerError from './Pages/ServerError'
-
-// 👇 NUEVAS PÁGINAS DE VERIFICACIÓN DE EMAIL
 import VerifyEmail from './Pages/VerifyEmail'
 import VerifyEmailPending from './Pages/VerifyEmailPending'
+import Contact from './Pages/Contact/Contact'
+import Privacy from './Pages/Privacy/Privacy'
+import Terms from './Pages/Terms/Terms'
 
 function App() {
     return (
@@ -36,10 +35,14 @@ function App() {
                 <CategoryContextProvider>
                     <CartContextProvider>
                         <Routes>
+                            {/* 🚨 RUTAS CON FOOTER (Layout principal) */}
                             <Route element={<Layout />}>
                                 {/* RUTAS PÚBLICAS */}
                                 <Route path="/" element={<Home />} />
                                 <Route path="/detailProduct/:id" element={<DetailProduct />} />
+                                <Route path="/contact" element={<Contact />} />
+                                <Route path="/privacy" element={<Privacy />} />
+                                <Route path="/terms" element={<Terms />} />
                                 
                                 {/* RUTAS DE INVITADOS */}
                                 <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
@@ -55,16 +58,20 @@ function App() {
                                 <Route path="/payment/success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
                                 <Route path="/payment/failure" element={<ProtectedRoute><PaymentFailure /></ProtectedRoute>} />
                                 <Route path="/payment/pending" element={<ProtectedRoute><PaymentPending /></ProtectedRoute>} />
-
-                                {/* ADMINISTRACIÓN */}
-                                <Route path="/admin/dashboard/*" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
                             </Route>
+
+                            {/* 🚨 ADMINISTRACIÓN - FUERA DEL LAYOUT PRINCIPAL (sin footer) */}
+                            <Route path="/admin/dashboard/*" element={
+                                <AdminRoute>
+                                    <AdminDashboard />
+                                </AdminRoute>
+                            } />
 
                             {/* 👇 RUTAS DE VERIFICACIÓN DE EMAIL - FUERA DEL LAYOUT PRINCIPAL */}
                             <Route path="/verify-email" element={<VerifyEmail />} />
                             <Route path="/verify-email-pending" element={<VerifyEmailPending />} />
 
-                            {/* 👇 RUTAS DE ERROR - VAN FUERA DEL LAYOUT PRINCIPAL */}
+                            {/* 👇 RUTAS DE ERROR - FUERA DEL LAYOUT PRINCIPAL */}
                             <Route path="/500" element={<ServerError />} />
                             <Route path="*" element={<NotFound />} />
                         </Routes>

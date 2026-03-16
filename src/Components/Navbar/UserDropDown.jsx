@@ -2,7 +2,6 @@ import { useUser } from '../../Hooks/useUser.js'
 import { useNavigate, Link } from 'react-router'
 import toast from 'react-hot-toast'
 
-// 🚩 Definimos la base del servidor (quitando el /api)
 const baseServerUrl = import.meta.env.VITE_BACKEND_URL.replace('/api', '');
 
 const UserDropDown = () => {
@@ -23,14 +22,12 @@ const UserDropDown = () => {
 
     if (!userInfo) return null
 
-    // 🚩 Lógica para construir la URL del avatar
     const getAvatarSrc = () => {
         if (userInfo?.avatar) {
             return userInfo.avatar.startsWith('http') 
                 ? userInfo.avatar 
                 : `${baseServerUrl}${userInfo.avatar}`;
         }
-        // Fallback a iniciales
         return `https://ui-avatars.com/api/?name=${userInfo?.username}&background=random`;
     };
 
@@ -68,7 +65,6 @@ const UserDropDown = () => {
                     </Link>
                 </li>
 
-                {/* 🚩 NUEVO: BOTÓN DE MIS ÓRDENES */}
                 <li>
                     <Link to="/orders" className="flex justify-between items-center py-2 active:bg-primary">
                         Mis Pedidos

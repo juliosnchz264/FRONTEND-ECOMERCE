@@ -1,5 +1,6 @@
+// frontend/src/Context/UserContext.jsx
 import { useState, useEffect, createContext, useCallback, useRef } from 'react'
-import { getProfileService, logoutService } from '../services/authServices'
+import { getProfileService, logoutService, checkSessionService } from '../services/authServices'
 import { useBroadcastAuth } from '../Hooks/useBroadcastAuth';
 import toast from 'react-hot-toast';
 
@@ -15,15 +16,15 @@ export const UserContextProvider = ({ children }) => {
     const { notifyLogin, notifyLogout, onMessage } = useBroadcastAuth();
     
     const logoutRef = useRef(null);
+    const checkSessionTimeoutRef = useRef(null); // 🟢 Para evitar múltiples llamadas
 
     const logout = useCallback(async (shouldNotify = true) => {
         // 🚨 Llamar al servicio de logout del backend
         if (shouldNotify) {
             try {
                 await logoutService();
-                console.log('✅ LogoutService ejecutado correctamente');
             } catch (error) {
-                console.error('❌ Error en logoutService:', error);
+                console.error('Error en logoutService:', error);
             }
         }
         
@@ -34,6 +35,8 @@ export const UserContextProvider = ({ children }) => {
         if (shouldNotify) {
             notifyLogout();
         }
+        
+        toast.success('Sesión cerrada correctamente');
     }, [notifyLogout]);
 
     useEffect(() => {
@@ -41,56 +44,55 @@ export const UserContextProvider = ({ children }) => {
     }, [logout]);
 
     const checkSession = useCallback(async () => {
-        if (!localStorage.getItem('wasAuthenticated')) {
-            setUserInfo(null);
-            setLoading(false);
-            return;
+        if (checkSessionTimeoutRef.current) {
+            clearTimeout(checkSessionTimeoutRef.current);
         }
 
-        try {
-            setLoading(true);
-            const userData = await getProfileService();
-            // ✅ Condición CORREGIDA
-            if (userData && userData.success === true && userData.data) {
-                setUserInfo(userData.data);
-                localStorage.setItem('userInfo', JSON.stringify(userData.data));
-            } else {
-                setUserInfo(null);
-                localStorage.removeItem('userInfo');
-                localStorage.removeItem('wasAuthenticated');
-            }
-        } catch (error) {
-            console.error("❌ Error en checkSession:", error);
-            
-            if (error.response?.status === 401) {
-                setUserInfo(null);
-                localStorage.removeItem('userInfo');
-                localStorage.removeItem('wasAuthenticated');
-            } else {
-                const localUserInfo = localStorage.getItem('userInfo');
-                if (localUserInfo) {
-                    setUserInfo(JSON.parse(localUserInfo));
+        checkSessionTimeoutRef.current = setTimeout(async () => {
+            try {
+                const result = await checkSessionService();
+                
+                if (result.success && result.authenticated) {
+                    const currentUserJSON = JSON.stringify(userInfo);
+                    const newUserJSON = JSON.stringify(result.user);
+                    
+                    if (currentUserJSON !== newUserJSON) {
+                        console.log('🔄 Actualizando información de usuario');
+                        setUserInfo(result.user);
+                        localStorage.setItem('userInfo', newUserJSON);
+                        localStorage.setItem('wasAuthenticated', 'true');
+                    } else {
+                        console.log('⏭️ Información de usuario idéntica, NO actualizando estado');
+                    }
+                } else {
+                    console.log('🚫 Sesión no válida');
+                    setUserInfo(null);
+                    localStorage.removeItem('userInfo');
+                    localStorage.removeItem('wasAuthenticated');
                 }
+            } catch (error) {
+                console.error('❌ Error en checkSession:', error);
+                // En caso de error, mantener la sesión actual
+            } finally {
+                setLoading(false);
+                checkSessionTimeoutRef.current = null;
             }
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+        }, 300);
+    }, [userInfo]);
 
     const login = useCallback(async (userData) => {
         localStorage.setItem('wasAuthenticated', 'true');
         localStorage.setItem('userInfo', JSON.stringify(userData));
         setUserInfo(userData);
         notifyLogin(userData.id);
+        toast.success(`¡Bienvenido, ${userData.name || 'usuario'}!`);
     }, [notifyLogin]);
 
     // Escuchar mensajes de otras pestañas
     useEffect(() => {
-        onMessage((data) => {
-            console.log('📨 Mensaje broadcast:', data);
-            
+        onMessage((data) => {            
             if (data.type === 'LOGOUT') {
-                console.log('🔔 Logout detectado en otra pestaña');
+                console.log('🔒 Logout detectado en otra pestaña');
                 toast('Has cerrado sesión en otra ventana', {
                     duration: 3000,
                     position: 'top-center',
@@ -102,7 +104,7 @@ export const UserContextProvider = ({ children }) => {
             }
             
             if (data.type === 'LOGIN') {
-                console.log('🔔 Login detectado en otra pestaña');
+                console.log('🔓 Login detectado en otra pestaña');
                 toast.success('Has iniciado sesión en otra ventana', {
                     duration: 3000,
                     position: 'top-center',
@@ -111,28 +113,44 @@ export const UserContextProvider = ({ children }) => {
                 checkSession();
             }
         });
+        
+        return () => {
+            if (checkSessionTimeoutRef.current) {
+                clearTimeout(checkSessionTimeoutRef.current);
+            }
+        };
     }, [onMessage, checkSession]);
 
     // Verificación inicial al cargar la pestaña
     useEffect(() => {
         checkSession();
+        
+        // 🟢 Verificar periódicamente la sesión (cada 5 minutos)
+        const interval = setInterval(checkSession, 5 * 60 * 1000);
+        
+        return () => {
+            clearInterval(interval);
+            if (checkSessionTimeoutRef.current) {
+                clearTimeout(checkSessionTimeoutRef.current);
+            }
+        };
     }, [checkSession]);
 
     const getUserId = useCallback(() => userInfo?.id || null, [userInfo]);
     const isAuthenticated = useCallback(() => !!userInfo?.id, [userInfo]);
 
+    const value = {
+        userInfo,
+        setUserInfo,
+        loading,
+        getUserId,
+        isAuthenticated,
+        login,
+        logout,
+    };
+
     return (
-        <UserContext.Provider
-            value={{
-                userInfo,
-                setUserInfo,
-                loading,
-                getUserId,
-                isAuthenticated,
-                login,
-                logout,
-            }}
-        >
+        <UserContext.Provider value={value}>
             {children}
         </UserContext.Provider>
     );

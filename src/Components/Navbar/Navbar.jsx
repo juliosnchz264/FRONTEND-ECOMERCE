@@ -38,7 +38,7 @@ const Navbar = () => {
                             >
                                 <div className="relative">
                                     <div className="absolute inset-0 bg-purple-100 rounded-full blur-md group-hover:blur-lg transition-all opacity-0 group-hover:opacity-100"></div>
-                                    <FiShoppingBag className="w-8 h-8 text-purple-600 relative z-10 group-hover:scale-110 transition-transform" />
+                                    <FiShoppingBag className="w-8 h-8 text-purple-600 relative group-hover:scale-110 transition-transform" />
                                 </div>
                                 <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent hidden sm:inline">
                                     E-comerce

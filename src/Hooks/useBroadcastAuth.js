@@ -9,10 +9,8 @@ export const useBroadcastAuth = () => {
     useEffect(() => {
         const channel = new BroadcastChannel(BROADCAST_CHANNEL);
         channelRef.current = channel;
-        console.log('📡 Canal de broadcast creado:', BROADCAST_CHANNEL);
 
         return () => {
-            console.log('📡 Cerrando canal de broadcast');
             channel.close();
             channelRef.current = null;
         };

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useProduct } from '../../Hooks/useProduct.js';
 import { FiFilter, FiX } from 'react-icons/fi';
-import { IoClose } from 'react-icons/io5';
 import { FaChevronDown, FaChevronRight, FaTag, FaLayerGroup } from 'react-icons/fa';
 import { BsStars } from 'react-icons/bs';
 import axios from 'axios';

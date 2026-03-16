@@ -1,16 +1,29 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import CardProduct from '../Components/CardProduct/CardProduct';
 import { useProduct } from '../Hooks/useProduct.js';
 import SidebarFilters from '../Components/SidebarFilters/SidebarFilters';
-import { FiFilter, FiShoppingBag } from 'react-icons/fi';
+import { FiShoppingBag } from 'react-icons/fi';
 
 const Home = () => {
     const { products, productsLoading, error, filterByCategory } = useProduct();
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     // Función para resetear filtros
     const resetFilters = () => {
         filterByCategory('Todos', null);
     };
+
+    useEffect(() => {
+        if (isSidebarOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [isSidebarOpen]);
 
     // Exponemos la función globalmente para que el Navbar pueda acceder a ella
     useEffect(() => {
@@ -26,11 +39,8 @@ const Home = () => {
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-purple-50/30">
             {/* Hero Section */}
             <div className="relative overflow-hidden bg-gradient-to-r from-purple-700 via-purple-800 to-purple-900 text-white py-16 mb-8">
-                <div className="absolute inset-0 bg-black/10"></div>
-                <div className="absolute -top-24 -right-24 w-96 h-96 bg-purple-500 rounded-full opacity-20 blur-3xl"></div>
-                <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-purple-300 rounded-full opacity-20 blur-3xl"></div>
-                
-                <div className="container mx-auto px-4 relative z-10">
+                {/* ... hero content igual ... */}
+                <div className="container mx-auto px-4 relative">
                     <div className="flex flex-col items-center text-center">
                         <div className="flex items-center gap-4 mb-4">
                             <FiShoppingBag className="w-12 h-12 text-purple-200" />
@@ -41,10 +51,6 @@ const Home = () => {
                         <p className="text-xl text-purple-100 max-w-2xl">
                             Descubre los mejores productos seleccionados especialmente para vos
                         </p>
-                        <div className="flex items-center gap-2 mt-6 text-purple-200 bg-purple-500/20 backdrop-blur-sm px-4 py-2 rounded-full">
-                            <FiFilter className="w-5 h-5" />
-                            <span className="text-sm">Usa los filtros para encontrar lo que buscas</span>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -52,17 +58,29 @@ const Home = () => {
             {/* Contenedor principal */}
             <div className="container mx-auto px-4 pb-16">
                 <div className="flex flex-col lg:flex-row gap-8">
-                    {/* Sidebar de filtros */}
+                    {/* Sidebar de filtros - con z-index controlado */}
                     <div className="lg:w-80 flex-shrink-0">
-                        <div className="sticky top-24 bg-white rounded-2xl shadow-xl border border-purple-100 overflow-hidden">
-                            <SidebarFilters />
-                        </div>
+                        <SidebarFilters onOpenChange={setIsSidebarOpen} />
                     </div>
                     
-                    {/* Grid de productos */}
-                    <main className="flex-1">
+                    {/* Grid de productos - con ajuste para móvil */}
+                    <main className={`flex-1 transition-all duration-300 ${
+                        isSidebarOpen ? 'lg:ml-0 overflow-hidden' : ''
+                    }`}>
+                        {/* Overlay para móvil cuando el sidebar está abierto */}
+                        {isSidebarOpen && (
+                            <div 
+                                className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-30"
+                                onClick={() => {
+                                    window.dispatchEvent(new CustomEvent('closeSidebar'));
+                                }}
+                            />
+                        )}
+
                         {/* Header con resultados */}
-                        <div className="flex items-center justify-between mb-6 bg-white p-4 rounded-xl shadow-md border border-purple-100">
+                        <div className={`flex items-center justify-between mb-6 bg-white p-4 rounded-xl shadow-md border border-purple-100 transition-all duration-300 ${
+                            isSidebarOpen ? 'lg:opacity-100 opacity-30 pointer-events-none lg:pointer-events-auto' : ''
+                        }`}>
                             <div>
                                 <h2 className="text-lg font-semibold text-gray-800">
                                     Productos disponibles
@@ -80,8 +98,10 @@ const Home = () => {
                             </button>
                         </div>
 
-                        {/* Grid de productos */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {/* Grid de productos - con altura y scroll controlado */}
+                        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 transition-all duration-300 ${
+                            isSidebarOpen ? 'lg:opacity-100 opacity-30 pointer-events-none lg:pointer-events-auto max-h-screen overflow-hidden' : ''
+                        }`}>
                             {productsLoading ? (
                                 <div className="col-span-full flex flex-col items-center justify-center min-h-[400px] bg-white rounded-2xl shadow-md border border-purple-100 p-12">
                                     <span className="loading loading-spinner text-purple-600 loading-lg mb-4"></span>

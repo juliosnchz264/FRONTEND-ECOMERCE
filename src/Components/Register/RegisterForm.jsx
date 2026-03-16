@@ -27,9 +27,6 @@ const RegisterForm = () => {
 
     const password = watch('password')
 
-    // ============================================
-    // HANDLE SUBMIT CORREGIDO
-    // ============================================
     const onSubmit = async (data) => {
         setIsSubmitting(true)
         try {
@@ -43,7 +40,6 @@ const RegisterForm = () => {
                         state: { email: data.email } 
                     })
                 } else {
-                    // Auto-login solo si no requiere verificación
                     await checkSession?.()
                     reset()
                     setRedirect(true)

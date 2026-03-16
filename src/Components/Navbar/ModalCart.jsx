@@ -12,11 +12,11 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, loading }) => {
     return (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
             {/* Overlay con blur */}
-            <div 
+            <div
                 className="absolute inset-0 bg-black/40 backdrop-blur-sm"
                 onClick={onClose}
             ></div>
-            
+
             {/* Modal */}
             <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full animate-fadeIn">
                 {/* Header */}
@@ -40,7 +40,8 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, loading }) => {
                 {/* Content */}
                 <div className="p-6">
                     <p className="text-gray-600 text-center text-lg">
-                        ¿Estás seguro de que quieres eliminar todos los productos del carrito?
+                        ¿Estás seguro de que quieres eliminar todos los
+                        productos del carrito?
                     </p>
                     <p className="text-gray-400 text-sm text-center mt-2">
                         Esta acción no se puede deshacer
@@ -91,20 +92,23 @@ const ModalCart = () => {
         clearCart,
         loading,
     } = useCart()
-    
+
     const [showConfirmModal, setShowConfirmModal] = useState(false)
 
     if (!isModalOpen) return null
 
     const handleClearCart = async () => {
-        await clearCart()
         setShowConfirmModal(false)
+        await clearCart()
+        closeModal()
     }
 
     return (
         <>
             <div className="modal modal-open inset-0 overflow-hidden z-50">
-                <section className="modal-box max-w-3xl bg-gradient-to-br from-white to-purple-50/30 rounded-2xl shadow-2xl border border-purple-100 overflow-y-auto max-h-[90vh]">                    {/* Header */}
+                <section className="modal-box max-w-3xl bg-gradient-to-br from-white to-purple-50/30 rounded-2xl shadow-2xl border border-purple-100 overflow-y-auto max-h-[90vh]">
+                    {' '}
+                    {/* Header */}
                     <div className="flex justify-between items-center mb-6 pb-4 border-b border-purple-100">
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-purple-100 rounded-xl">
@@ -121,16 +125,21 @@ const ModalCart = () => {
                             <FiX className="w-5 h-5" />
                         </button>
                     </div>
-
                     {loading ? (
                         <div className="text-center py-12">
                             <span className="loading loading-spinner text-purple-600 loading-lg"></span>
-                            <p className="text-gray-500 mt-3">Actualizando carrito...</p>
+                            <p className="text-gray-500 mt-3">
+                                Actualizando carrito...
+                            </p>
                         </div>
                     ) : cart.length === 0 ? (
                         <div className="text-center py-12">
-                            <div className="text-gray-300 text-7xl mb-4">🛒</div>
-                            <p className="text-gray-500 text-lg">Tu carrito está vacío</p>
+                            <div className="text-gray-300 text-7xl mb-4">
+                                🛒
+                            </div>
+                            <p className="text-gray-500 text-lg">
+                                Tu carrito está vacío
+                            </p>
                             <button
                                 onClick={closeModal}
                                 className="btn btn-primary mt-4 bg-gradient-to-r from-purple-600 to-purple-700 border-0"
@@ -140,37 +149,38 @@ const ModalCart = () => {
                         </div>
                     ) : (
                         <>
-                                    <div className="space-y-4 pr-2 custom-scrollbar">
-                                        {cart.map((item) => (
+                            <div className="space-y-4 pr-2 custom-scrollbar">
+                                {cart.map((item) => (
                                     <div
                                         key={item._id}
                                         className="flex items-center gap-4 p-3 bg-white rounded-xl shadow-sm border border-purple-50 hover:shadow-md transition-shadow"
                                     >
-                                    <div className="w-20 h-20 flex-shrink-0">
-                                        {item.imageUrl ? (
-                                            <img
-                                                className="w-full h-full object-cover rounded-xl"
-                                                src={item.imageUrl}
-                                                alt={item.name}
-                                                onError={(e) => {
-                                                    e.target.onerror = null;
-                                                    e.target.style.display = 'none';
-                                                    e.target.parentElement.innerHTML = `
+                                        <div className="w-20 h-20 flex-shrink-0">
+                                            {item.imageUrl ? (
+                                                <img
+                                                    className="w-full h-full object-cover rounded-xl"
+                                                    src={item.imageUrl}
+                                                    alt={item.name}
+                                                    onError={(e) => {
+                                                        e.target.onerror = null
+                                                        e.target.style.display =
+                                                            'none'
+                                                        e.target.parentElement.innerHTML = `
                                                         <div class="w-full h-full bg-gray-200 rounded-xl flex items-center justify-center">
                                                             <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                                             </svg>
                                                         </div>
-                                                    `;
-                                                }}
-                                            />
-                                        ) : (
-                                            <div className="w-full h-full bg-gray-200 rounded-xl flex items-center justify-center">
-                                                <FiImage className="w-8 h-8 text-gray-400" />
-                                            </div>
-                                        )}
-                                    </div>
-                                        
+                                                    `
+                                                    }}
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full bg-gray-200 rounded-xl flex items-center justify-center">
+                                                    <FiImage className="w-8 h-8 text-gray-400" />
+                                                </div>
+                                            )}
+                                        </div>
+
                                         <div className="flex-1">
                                             <div className="flex items-start justify-between mb-2">
                                                 <div>
@@ -182,7 +192,11 @@ const ModalCart = () => {
                                                     </p>
                                                 </div>
                                                 <span className="font-bold text-lg text-purple-700">
-                                                    ${(item.price * item.quantity).toFixed(2)}
+                                                    $
+                                                    {(
+                                                        item.price *
+                                                        item.quantity
+                                                    ).toFixed(2)}
                                                 </span>
                                             </div>
 
@@ -191,17 +205,27 @@ const ModalCart = () => {
                                                     <div className="flex items-center rounded-lg border border-gray-200">
                                                         <button
                                                             onClick={async () => {
-                                                                if (item.quantity > 1) {
+                                                                if (
+                                                                    item.quantity >
+                                                                    1
+                                                                ) {
                                                                     await updateQuantity(
                                                                         item._id,
-                                                                        item.quantity - 1
+                                                                        item.quantity -
+                                                                            1,
                                                                     )
                                                                 }
                                                             }}
-                                                            disabled={loading || item.quantity <= 1}
+                                                            disabled={
+                                                                loading ||
+                                                                item.quantity <=
+                                                                    1
+                                                            }
                                                             className="p-2 hover:bg-gray-50 disabled:opacity-50 transition-colors"
                                                         >
-                                                            <FaMinus size={12} />
+                                                            <FaMinus
+                                                                size={12}
+                                                            />
                                                         </button>
                                                         <span className="w-10 text-center font-medium">
                                                             {item.quantity}
@@ -210,10 +234,16 @@ const ModalCart = () => {
                                                             onClick={async () => {
                                                                 await updateQuantity(
                                                                     item._id,
-                                                                    item.quantity + 1
+                                                                    item.quantity +
+                                                                        1,
                                                                 )
                                                             }}
-                                                            disabled={loading || item.quantity >= (item.stock || 999)}
+                                                            disabled={
+                                                                loading ||
+                                                                item.quantity >=
+                                                                    (item.stock ||
+                                                                        999)
+                                                            }
                                                             className="p-2 hover:bg-gray-50 disabled:opacity-50 transition-colors"
                                                         >
                                                             <FaPlus size={12} />
@@ -223,7 +253,9 @@ const ModalCart = () => {
 
                                                 <button
                                                     onClick={async () => {
-                                                        await removeFromCart(item._id)
+                                                        await removeFromCart(
+                                                            item._id,
+                                                        )
                                                     }}
                                                     disabled={loading}
                                                     className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
@@ -240,15 +272,21 @@ const ModalCart = () => {
                             {/* Resumen */}
                             <div className="border-t border-purple-100 pt-4 mt-6">
                                 <div className="flex justify-between items-center mb-3">
-                                    <span className="text-gray-600">Total de artículos:</span>
+                                    <span className="text-gray-600">
+                                        Total de artículos:
+                                    </span>
                                     <span className="font-semibold bg-purple-100 px-3 py-1 rounded-full text-purple-700">
                                         {itemsQuantity}
                                     </span>
                                 </div>
 
                                 <div className="flex justify-between items-center text-2xl font-bold">
-                                    <span className="text-gray-800">Total:</span>
-                                    <span className="text-purple-700">${total.toFixed(2)}</span>
+                                    <span className="text-gray-800">
+                                        Total:
+                                    </span>
+                                    <span className="text-purple-700">
+                                        ${total.toFixed(2)}
+                                    </span>
                                 </div>
                             </div>
 
@@ -283,7 +321,7 @@ const ModalCart = () => {
             </div>
 
             {/* Modal de confirmación */}
-            <ConfirmModal 
+            <ConfirmModal
                 isOpen={showConfirmModal}
                 onClose={() => setShowConfirmModal(false)}
                 onConfirm={handleClearCart}

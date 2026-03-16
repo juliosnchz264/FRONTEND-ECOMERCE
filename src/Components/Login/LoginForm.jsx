@@ -11,7 +11,7 @@ const LoginForm = () => {
         mode: 'onChange',
     })
 
-    const { login } = useUser()  // 👈 CAMBIADO: usar login en lugar de setUserInfo
+    const { login } = useUser()
     const navigate = useNavigate()
     const location = useLocation()
     const [showPassword, setShowPassword] = useState(false)
@@ -22,17 +22,16 @@ const LoginForm = () => {
     const onSubmit = async (data) => {
         try {
             setIsSubmitting(true)
-            const result = await loginService(data)
+            // 🟢 CORREGIDO: Pasar email y password como parámetros separados
+            const result = await loginService(data.email, data.password)
 
             if (result && result.success) {
-                // ✅ USAR LA FUNCIÓN login DEL CONTEXTO
                 login(result.user) 
                 
                 toast.success(result.message || '¡Bienvenido!')
                 reset()
 
                 const destination = from || (result.user.isAdmin ? '/admin/dashboard/products' : '/')
-                
                 navigate(destination, { replace: true })
             } else {
                 toast.error(result?.message || 'Credenciales incorrectas')
