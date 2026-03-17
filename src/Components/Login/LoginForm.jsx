@@ -32,7 +32,6 @@ const LoginForm = () => {
             if (result && result.success) {
                 // 🟢 Pasamos tanto el usuario como el token al contexto
                 login(result.user, result.accessToken)
-
                 toast.success(result.message || '¡Bienvenido!')
                 reset()
 

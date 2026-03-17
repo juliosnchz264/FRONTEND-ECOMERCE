@@ -114,21 +114,21 @@ export const updateCartService = async (productId, quantity) => {
  */
 export const removeFromCartService = async (productId) => {
     try {
-        console.log('🗑️ Eliminando producto:', productId);
+        console.log('🗑️ Eliminando producto:', productId)
         const response = await api.delete(`${API_URL}/product`, {
             data: { productId }
-        });
+        })
         
-        logResponse('DELETE', `${API_URL}/product`, response);
-        return response.data;
+        logResponse('DELETE', `${API_URL}/product`, response)
+        return response.data // 👈 DEBE DEVOLVER response.data con el carrito actualizado
     } catch (error) {
-        logError('DELETE', `${API_URL}/product`, error);
+        logError('DELETE', `${API_URL}/product`, error)
         throw new Error(
             error.response?.data?.message ||
                 'Error al eliminar producto del carrito'
-        );
+        )
     }
-};
+}
 
 /**
  * Vaciar todo el carrito
@@ -178,18 +178,16 @@ export const getCartTotalService = async () => {
 /**
  * Fusionar carritos (invitado -> usuario)
  */
-export const mergeCartsService = async () => {
+
+export const mergeCartsService = async (localProducts) => {
     try {
-        console.log('🔄 Fusionando carritos...');
-        const response = await api.post(`${API_URL}/merge`);
-        
-        logResponse('POST', `${API_URL}/merge`, response);
+        console.log('🚀 Enviando POST a /cart/merge con:', localProducts);
+        const response = await api.post('/cart/merge', { products: localProducts });
+        console.log('✅ Respuesta del servidor tras merge:', response.data);
         return response.data;
     } catch (error) {
-        logError('POST', `${API_URL}/merge`, error);
-        throw new Error(
-            error.response?.data?.message || 'Error al fusionar carritos'
-        );
+        console.error('❌ Error en el servicio de merge:', error.response?.data || error.message);
+        throw error;
     }
 };
 

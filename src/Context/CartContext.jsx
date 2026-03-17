@@ -1,4 +1,3 @@
-// frontend/src/Context/CartContext.jsx
 import {
     createContext,
     useState,
@@ -8,13 +7,13 @@ import {
     useRef,
 } from 'react'
 import { useUser } from '../Hooks/useUser.js'
-import { useRealtimeCart } from '../Hooks/useRealTimeCart.js'
 import {
     addToCartService,
     getCartService,
     updateCartService,
     removeFromCartService,
     clearCartService,
+    mergeCartsService,
 } from '../services/cartServices'
 import { toast } from 'react-hot-toast'
 
@@ -22,642 +21,397 @@ export const CartContext = createContext({})
 
 export const CartContextProvider = ({ children }) => {
     const [cart, setCart] = useState([])
-    const [isModalOpen, setIsModalOpen] = useState(false)
     const [loading, setLoading] = useState(true)
-    const [syncInProgress, setSyncInProgress] = useState(false)
+    const [isModalOpen, setIsModalOpen] = useState(false)
+    const { isAuthenticated, userLoading } = useUser()
 
-    // 🟢 REFERENCIAS PARA CONTROLAR OPERACIONES
+    const broadcastChannelRef = useRef(null)
     const isMountedRef = useRef(true)
     const initialLoadDoneRef = useRef(false)
-    const lastUpdateRef = useRef(null)
-    const broadcastChannelRef = useRef(null)
-    const retryCountRef = useRef(0)
-    const maxRetries = 3
+    const previousAuthState = useRef(null)
+    const cartRef = useRef([])
 
-    // 🟢 NUEVAS REFERENCIAS PARA CONTROLAR EMISIONES
-    const addToCartInProgressRef = useRef(false)
-    const emitTimeoutRef = useRef(null)
-    const lastEmittedCartRef = useRef(null)
+    const windowIdRef = useRef(Math.random().toString(36).substring(7))
 
-    // Pasar setCart al hook de tiempo real
-    const {
-        connected,
-        emitUpdate,
-        addToCart: realtimeAddToCart,
-        updateQuantity: realtimeUpdateQuantity,
-        removeFromCart: realtimeRemoveFromCart,
-        clearCart: realtimeClearCart,
-    } = useRealtimeCart(setCart)
-
-    const {
-        getUserId,
-        isAuthenticated,
-        loading: userLoading,
-        userInfo,
-    } = useUser()
-
-    // LOG PARA VERIFICAR QUE setCart ESTÁ DISPONIBLE
-    console.log('🎯 CartContext - setCart disponible:', !!setCart)
-
-    // ===== CONFIGURAR BROADCAST CHANNEL PARA SINCRONIZACIÓN ENTRE PESTAÑAS =====
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const channel = new BroadcastChannel('ecommerce_cart_broadcast')
-            broadcastChannelRef.current = channel
-
-            channel.onmessage = (event) => {
-                const { type, cart: remoteCart, timestamp, source } = event.data
-
-                if (source === window.location.href) return
-
-                // 🚩 MEJORA: Si el socket está conectado, ignoramos el Broadcast
-                // porque el servidor ya nos enviará la verdad absoluta.
-                if (connected) {
-                    console.log(
-                        '⏭️ Ignorando Broadcast porque Socket.IO está activo',
-                    )
-                    return
-                }
-
-                if (lastUpdateRef.current === timestamp) return
-
-                if (type === 'CART_UPDATED') {
-                    console.log(
-                        '📻 Sincronizando vía Broadcast (Modo Invitado/Offline)',
-                    )
-                    setCart(remoteCart)
-                    saveLocalCart(remoteCart)
-                    lastUpdateRef.current = timestamp
-                }
-            }
-
-            console.log(
-                '📻 BroadcastChannel configurado para sincronización entre pestañas',
-            )
-
-            return () => {
-                console.log('📻 Cerrando BroadcastChannel')
-                channel.close()
-            }
-        }
-    }, [])
-
-    // Función para emitir cambios a través de BroadcastChannel
-    const broadcastUpdate = useCallback((cartData) => {
-        if (broadcastChannelRef.current && typeof window !== 'undefined') {
-            const timestamp = Date.now()
-            lastUpdateRef.current = timestamp
-
-            broadcastChannelRef.current.postMessage({
-                type: 'CART_UPDATED',
-                cart: cartData,
-                source: window.location.href,
-                timestamp: timestamp,
-            })
-
-            console.log(
-                '📻 Emitiendo actualización vía BroadcastChannel:',
-                cartData,
-            )
-        }
-    }, [])
-
-    // Mostrar estado de conexión
-    useEffect(() => {
-        if (connected) {
-            console.log('🟢 Carrito sincronizado en tiempo real (Socket.IO)')
-        } else {
-            console.log(
-                '🟡 Modo sincronización entre pestañas (BroadcastChannel)',
-            )
-        }
-    }, [connected])
-
-    // ===== CÁLCULO DE TOTALES =====
-    const total = useMemo(() => {
-        const rawTotal = cart.reduce(
-            (acc, item) => acc + item.price * (item.quantity || 1),
-            0,
-        )
-        return Number(rawTotal.toFixed(2))
+        cartRef.current = cart
     }, [cart])
 
-    const itemsQuantity = useMemo(() => {
-        return cart.reduce((acc, item) => acc + (item.quantity || 1), 0)
-    }, [cart])
-
-    // Funciones de localStorage
-    const loadLocalCart = useCallback(() => {
-        try {
-            const localCart = localStorage.getItem('cart')
-            return localCart ? JSON.parse(localCart) : []
-        } catch (error) {
-            console.error('Error al cargar carrito local:', error)
-            return []
-        }
-    }, [])
-
-    const saveLocalCart = useCallback((cartItems) => {
-        try {
-            localStorage.setItem('cart', JSON.stringify(cartItems))
-        } catch (error) {
-            console.error('Error al guardar carrito local:', error)
-        }
-    }, [])
-
-    // Función para cargar el carrito (backend o localStorage) - VERSIÓN CORREGIDA
-    const loadCart = useCallback(
-        async (skipCache = false) => {
-            // 🟢 ELIMINADO: if (loading && !skipCache) return;
-
-            if (isAuthenticated()) {
-                try {
-                    setLoading(true)
-                    const response = await getCartService()
-
-                    const cartItems =
-                        response.cart?.products?.map((item) => ({
-                            _id: item.productId._id,
-                            name: item.productId.name,
-                            price: item.productId.price,
-                            imageUrl: item.productId.imageUrl || null,
-                            description: item.productId.description,
-                            stock: item.productId.stock,
-                            quantity: item.quantity,
-                        })) || []
-
-                    if (isMountedRef.current) {
-                        setCart(cartItems)
-
-                        // Sincronizar localStorage
-                        if (cartItems.length > 0) {
-                            localStorage.setItem(
-                                'cart',
-                                JSON.stringify(cartItems),
-                            )
-                        } else {
-                            localStorage.removeItem('cart')
-                        }
-                    }
-
-                    return cartItems
-                } catch (error) {
-                    console.log('Error al cargar carrito:', error)
-                    if (isMountedRef.current) {
-                        setCart([])
-                    }
-                    return []
-                } finally {
-                    // 🟢 SIEMPRE liberar loading
-                    if (isMountedRef.current) {
-                        setLoading(false)
-                    }
-                }
-            } else {
-                const localCart = loadLocalCart()
-                if (isMountedRef.current) {
-                    setCart(localCart)
-                    setLoading(false)
-                }
-                return localCart
-            }
-        },
-        [isAuthenticated, loadLocalCart], // 🟢 Eliminado 'loading' de dependencias
+    // ============================================
+    // 💾 HELPERS
+    // ============================================
+    const loadLocalCart = useCallback(
+        () => JSON.parse(localStorage.getItem('cart') || '[]'),
+        [],
     )
 
-    // Función para sincronizar carrito local con el backend (VERSIÓN FINAL)
-    const syncCartWithBackend = useCallback(async () => {
-        const localCart = loadLocalCart()
+    const saveLocalCart = useCallback((items) => {
+        localStorage.setItem('cart', JSON.stringify(items))
+        setCart(items)
+    }, [])
 
-        // Solo sincronizar si hay algo local y el usuario está autenticado
-        if (localCart.length > 0 && isAuthenticated() && !syncInProgress) {
-            setSyncInProgress(true)
-            try {
-                setLoading(true)
-                console.log(
-                    '🔄 Iniciando fusión de carrito local con servidor...',
-                )
-
-                // En lugar de elegir CASO 1 o CASO 2, FUSIONAMOS siempre
-                for (const item of localCart) {
-                    await addToCartService(item._id, item.quantity)
-                }
-
-                // Una vez subido todo, limpiamos local
-                localStorage.removeItem('cart')
-
-                // Recargamos el carrito final del backend
-                const finalCart = await loadCart(true)
-
-                // 🚀 ESTO ES LO QUE ARREGLA EL CONFLICTO MULTI-DISPOSITIVO:
-                // Si el socket ya conectó, avisamos a todos los demás dispositivos
-                if (connected && finalCart) {
-                    const response = await getCartService()
-                    emitUpdate(response.cart)
-                    console.log(
-                        '📤 Cambio global emitido tras fusión post-login',
-                    )
-                }
-
-                toast.success('Carrito sincronizado y recuperado')
-            } catch (error) {
-                console.error('❌ Error en la sincronización:', error)
-            } finally {
-                setSyncInProgress(false)
-                setLoading(false)
-            }
-        }
-    }, [
-        isAuthenticated,
-        loadLocalCart,
-        loadCart,
-        connected,
-        emitUpdate,
-        syncInProgress,
-    ])
-
-    // 2. CORRECCIÓN DEL LOG DE ESTADO (Para que no sea molesto)
-    useEffect(() => {
-        if (connected) {
-            console.log(
-                '🟢 Conectado: Sincronización Real-time activa (Socket.IO)',
-            )
-        } else {
-            // Solo mostrar si no estamos cargando el usuario, para evitar ruido innecesario
-            if (!userLoading) {
-                console.log(
-                    '🟡 Pendiente: Usando respaldo entre pestañas (BroadcastChannel)',
-                )
-            }
-        }
-    }, [connected, userLoading])
-
-    // 3. ACTUALIZAR EL useEffect de inicialización para que la lógica de fusión sea sólida
-    useEffect(() => {
-        isMountedRef.current = true
-        if (userLoading) return
-
-        const initCart = async () => {
-            if (initialLoadDoneRef.current) return
-
-            if (isAuthenticated()) {
-                // 1. Cargamos primero lo que dice el servidor
-                const backendCart = await loadCart(true)
-                const localCart = loadLocalCart()
-
-                // 2. ¿Hay conflicto? (Hay cosas en local Y en el backend)
-                if (localCart.length > 0) {
-                    if (backendCart && backendCart.length > 0) {
-                        // ESTRATEGIA: Si el backend ya tiene datos, asumimos que
-                        // lo local es "basura" o ya fue sincronizado por otra pestaña.
-                        console.log(
-                            '🧹 Limpiando localCart redundante (el servidor ya tiene datos)',
-                        )
-                        localStorage.removeItem('cart')
-                    } else {
-                        // Si el backend está vacío pero hay local, sincronizamos
-                        console.log('🔄 Sincronizando carrito local único...')
-                        await syncCartWithBackend()
-                    }
-                }
-            } else {
-                setCart(loadLocalCart())
-                setLoading(false)
-            }
-            initialLoadDoneRef.current = true
-        }
-
-        initCart()
-        return () => {
-            isMountedRef.current = false
-        }
-    }, [
-        isAuthenticated,
-        userLoading,
-        loadCart,
-        loadLocalCart,
-        syncCartWithBackend,
-    ])
-    // Manejo de cambios de autenticación - VERSIÓN CORREGIDA
-    useEffect(() => {
-        isMountedRef.current = true
-
-        if (userLoading) return
-
-        const initCart = async () => {
-            if (initialLoadDoneRef.current) return
-
-            if (isAuthenticated()) {
-                // 🟢 PRIMERO: Cargar del backend
-                const backendCart = await loadCart()
-
-                // 🟢 SOLO si el backend está vacío, verificar localStorage
-                if (backendCart && backendCart.length === 0) {
-                    const localCart = loadLocalCart()
-
-                    // Si hay productos locales Y no hay sync en progreso
-                    if (localCart.length > 0 && !syncInProgress) {
-                        console.log(
-                            '⚠️ Backend vacío con productos locales detectado:',
-                            localCart.length,
-                        )
-
-                        // 🟢 AHORA SÍ USAMOS syncCartWithBackend
-                        await syncCartWithBackend()
-                    }
-                }
-
-                // 🟢 Si el backend ya tiene productos, todo bien
-                else if (backendCart && backendCart.length > 0) {
-                    console.log(
-                        '✅ Carrito del backend cargado:',
-                        backendCart.length,
-                        'productos',
-                    )
-                }
-            } else {
-                // Usuario no autenticado
-                setCart(loadLocalCart())
-                setLoading(false)
-            }
-
-            initialLoadDoneRef.current = true
-        }
-
-        initCart()
-
-        return () => {
-            isMountedRef.current = false
-        }
-    }, [
-        isAuthenticated,
-        userLoading,
-        loadLocalCart,
-        loadCart,
-        syncCartWithBackend,
-        syncInProgress,
-    ])
-
-    // ===== FUNCIONES DEL MODAL =====
-    // 🟢 MOVERLAS AQUÍ, ANTES DE LAS FUNCIONES QUE LAS USAN
     const openModal = useCallback(() => setIsModalOpen(true), [])
     const closeModal = useCallback(() => setIsModalOpen(false), [])
 
-    // ===== FUNCIONES DEL CARRITO CON CONTROL DE ERRORES =====
-    const addToCart = useCallback(
-        async (product, quantity = 1) => {
-            if (addToCartInProgressRef.current) {
-                console.log('⏳ Operación de agregar en curso, ignorando')
-                return
-            }
+    const mapRemoteCart = useCallback((products) => {
+        return (
+            products
+                ?.filter((p) => p.productId)
+                .map((p) => ({
+                    _id: p.productId._id || p.productId,
+                    name: p.productId.name,
+                    price: p.productId.price,
+                    imageUrl: p.productId.imageUrl,
+                    quantity: p.quantity,
+                    stock: p.productId.stock,
+                })) || []
+        )
+    }, [])
 
-            if (quantity <= 0) {
-                toast.error('La cantidad debe ser mayor a 0')
-                return
-            }
+    // ============================================
+    //  CARGA DEL CARRITO
+    // ============================================
+    const loadCart = useCallback(
+        async (skipLoading = false) => {
+            if (!isMountedRef.current) return
+            if (!skipLoading) setLoading(true)
 
-            // 🟢 VERIFICAR STOCK LOCALMENTE PRIMERO
-            const currentCartItem = cart.find(
-                (item) => item._id === product._id,
-            )
-            const currentQty = currentCartItem?.quantity || 0
-            const totalAfterAdd = currentQty + quantity
-
-            if (totalAfterAdd > product.stock) {
-                const availableToAdd = product.stock - currentQty
-                toast.error(
-                    availableToAdd === 0
-                        ? `Ya tienes el máximo disponible (${product.stock}) en tu carrito`
-                        : `Solo puedes agregar ${availableToAdd} más (límite: ${product.stock})`,
-                )
-                return
-            }
-
-            if (isAuthenticated()) {
-                try {
-                    addToCartInProgressRef.current = true
-                    setLoading(true)
-
-                    await addToCartService(product._id, quantity)
-                    const updatedCart = await loadCart(true)
-
-                    if (emitTimeoutRef.current) {
-                        clearTimeout(emitTimeoutRef.current)
-                    }
-
-                    if (connected && updatedCart) {
-                        emitTimeoutRef.current = setTimeout(async () => {
-                            try {
-                                const response = await getCartService()
-                                emitUpdate(response.cart)
-                                console.log(
-                                    '📤 Emisión única después de agregar',
-                                )
-                            } finally {
-                                emitTimeoutRef.current = null
-                            }
-                        }, 500)
-                    }
-
-                    toast.success('Producto agregado al carrito')
-                } catch (error) {
-                    console.error('Error al agregar al carrito:', error)
-
-                    // Mensajes más amigables
-                    if (error.message.includes('máximo disponible')) {
-                        toast.error(
-                            'Ya tienes la cantidad máxima permitida en tu carrito',
-                        )
-                    } else {
-                        toast.error(
-                            error.message || 'Error al agregar al carrito',
-                        )
-                    }
-                } finally {
-                    setLoading(false)
-                    setTimeout(() => {
-                        addToCartInProgressRef.current = false
-                    }, 1000)
-                }
-            } else {
-                // Modo offline - implementar cuando sea necesario
-                setCart((prevCart) => {
-                    const existingIndex = prevCart.findIndex(
-                        (item) => item._id === product._id,
-                    )
-                    let newCart
-
-                    if (existingIndex > -1) {
-                        newCart = prevCart.map((item, index) =>
-                            index === existingIndex
-                                ? {
-                                      ...item,
-                                      quantity: (item.quantity || 1) + quantity,
-                                  }
-                                : item,
-                        )
-                    } else {
-                        newCart = [...prevCart, { ...product, quantity }]
-                    }
-
-                    saveLocalCart(newCart)
-                    broadcastUpdate(newCart)
-                    toast.success('Producto agregado al carrito')
-                    return newCart
-                })
-            }
-        },
-        [
-            isAuthenticated,
-            loadCart,
-            connected,
-            emitUpdate,
-            cart,
-            saveLocalCart,
-            broadcastUpdate,
-        ],
-    )
-
-    const removeFromCart = useCallback(
-        async (productId) => {
-            if (isAuthenticated()) {
-                try {
-                    setLoading(true)
-                    await removeFromCartService(productId)
-                    const updatedCart = await loadCart(true)
-
-                    if (connected && updatedCart) {
-                        const response = await getCartService()
-                        emitUpdate(response.cart)
-                    }
-
-                    // 🟢 Cerrar modal después de eliminar
-                    closeModal()
-
-                    toast.success('Producto eliminado del carrito')
-                } catch (error) {
-                    console.error('Error al eliminar producto:', error)
-                    toast.error(error.message || 'Error al eliminar producto')
-                } finally {
-                    setLoading(false)
-                }
-            } else {
-                setCart((prevCart) => {
-                    const newCart = prevCart.filter(
-                        (item) => item._id !== productId,
-                    )
-                    saveLocalCart(newCart)
-                    broadcastUpdate(newCart)
-
-                    // 🟢 Cerrar modal para usuarios no autenticados también
-                    closeModal()
-
-                    return newCart
-                })
-                toast.success('Producto eliminado del carrito')
-            }
-        },
-        [
-            isAuthenticated,
-            loadCart,
-            saveLocalCart,
-            connected,
-            emitUpdate,
-            broadcastUpdate,
-            closeModal, // ✅ AHORA closeModal ESTÁ DEFINIDA
-        ],
-    )
-
-    const updateQuantity = useCallback(
-        async (productId, newQuantity) => {
-            if (newQuantity < 1) {
-                removeFromCart(productId)
-                return
-            }
-
-            if (isAuthenticated()) {
-                try {
-                    setLoading(true)
-                    await updateCartService(productId, newQuantity)
-                    const updatedCart = await loadCart(true)
-
-                    if (connected && updatedCart) {
-                        const response = await getCartService()
-                        emitUpdate(response.cart)
-                    }
-                } catch (error) {
-                    console.error('Error al actualizar cantidad:', error)
-                    toast.error(error.message || 'Error al actualizar cantidad')
-                } finally {
-                    setLoading(false)
-                }
-            } else {
-                setCart((prevCart) => {
-                    const item = prevCart.find((i) => i._id === productId)
-
-                    if (item?.stock && newQuantity > item.stock) {
-                        toast.error(`Stock insuficiente. Máximo: ${item.stock}`)
-                        return prevCart
-                    }
-
-                    const newCart = prevCart.map((item) =>
-                        item._id === productId
-                            ? { ...item, quantity: newQuantity }
-                            : item,
-                    )
-                    saveLocalCart(newCart)
-                    broadcastUpdate(newCart)
-                    return newCart
-                })
-            }
-        },
-        [
-            isAuthenticated,
-            loadCart,
-            saveLocalCart,
-            connected,
-            emitUpdate,
-            broadcastUpdate,
-            removeFromCart,
-        ],
-    )
-
-    const clearCart = useCallback(async () => {
-        if (isAuthenticated()) {
             try {
+                if (isAuthenticated()) {
+                    const response = await getCartService()
+                    const remoteItems = mapRemoteCart(response.cart?.products)
+                    setCart(remoteItems)
+                    return remoteItems
+                } else {
+                    const local = loadLocalCart()
+                    setCart(local)
+                    return local
+                }
+            } catch (error) {
+                console.error('Error cargando carrito:', error)
+                return []
+            } finally {
+                if (!skipLoading) setLoading(false)
+            }
+        },
+        [isAuthenticated, loadLocalCart, mapRemoteCart],
+    )
+
+    // ============================================
+    //  FUNCIÓN DE BROADCAST 
+    // ============================================
+    const notifyOtherTabs = useCallback((type, additionalData = {}) => {
+        if (broadcastChannelRef.current) {
+            broadcastChannelRef.current.postMessage({
+                type,
+                payload: {
+                    sourceId: windowIdRef.current,
+                    timestamp: Date.now(),
+                    ...additionalData,
+                },
+            })
+        }
+    }, [])
+
+    // ============================================
+    //  FUSIÓN POST-LOGIN 
+    // ============================================
+    const syncCartAfterLogin = useCallback(async () => {
+        const guestItems = loadLocalCart()
+        setLoading(true)
+
+        try {
+            // Verificar si Web Locks está disponible
+            const webLocksAvailable =
+                navigator &&
+                navigator.locks &&
+                typeof navigator.locks.request === 'function'
+
+            if (webLocksAvailable) {
+                await navigator.locks.request(
+                    'cart-merge-lock',
+                    async (lock) => {
+                        // SIEMPRE hacer merge si hay items de invitado
+                        if (guestItems.length > 0) {
+                            const response = await mergeCartsService(guestItems)
+                            localStorage.removeItem('cart')
+
+                            if (response.cart?.products) {
+                                const mergedItems = mapRemoteCart(
+                                    response.cart.products,
+                                )
+                                setCart(mergedItems)
+                                toast.success('¡Carrito sincronizado!')
+                            }
+                        } else {
+                            // Si no hay items de invitado, solo cargar
+                            const currentCart = await getCartService()
+                            setCart(mapRemoteCart(currentCart.cart?.products))
+                        }
+                    },
+                )
+            } else {
+                // Notificar que vamos a hacer merge
+                notifyOtherTabs('MERGE_STARTED', {
+                    windowId: windowIdRef.current,
+                })
+
+                // Esperar para ver si alguien más ya empezó
+                await new Promise((r) => setTimeout(r, 300))
+
+                // 🚨 SIEMPRE hacer merge si hay items de invitado
+                if (guestItems.length > 0) {
+                    // Verificar si ya hay un merge en progreso de otra ventana
+                    if (!window.mergeInProgress) {
+                        window.mergeInProgress = true
+
+                        const response = await mergeCartsService(guestItems)
+                        localStorage.removeItem('cart')
+
+                        if (response.cart?.products) {
+                            const mergedItems = mapRemoteCart(
+                                response.cart.products,
+                            )
+                            setCart(mergedItems)
+                            toast.success('¡Carrito sincronizado!')
+                        }
+
+                        setTimeout(() => {
+                            window.mergeInProgress = false
+                        }, 5000)
+                    } else {
+                        // Esperar y recargar
+                        await new Promise((r) => setTimeout(r, 1000))
+                        const currentCart = await getCartService()
+                        setCart(mapRemoteCart(currentCart.cart?.products))
+                    }
+                } else {
+                    // Si no hay items de invitado, solo cargar
+                    const currentCart = await getCartService()
+                    setCart(mapRemoteCart(currentCart.cart?.products))
+                }
+            }
+
+            // Notificar a otras pestañas que recarguen
+            notifyOtherTabs('RELOAD_CART')
+        } catch (error) {
+            console.error(`❌ [${windowIdRef.current}] Error:`, error)
+            toast.error('Error al sincronizar')
+            await loadCart(true)
+        } finally {
+            setLoading(false)
+        }
+    }, [loadLocalCart, loadCart, mapRemoteCart, notifyOtherTabs])
+
+    // ============================================
+    //  BROADCAST CHANNEL
+    // ============================================
+    useEffect(() => {
+        const channel = new BroadcastChannel('ecommerce_cart_sync')
+        broadcastChannelRef.current = channel
+        channel.onmessage = (event) => {
+            const { type, payload } = event.data
+
+            // Ignorar mensajes propios
+            if (payload?.sourceId === windowIdRef.current) return
+
+            if (type === 'RELOAD_CART') {
+                loadCart(true)
+            } else if (type === 'LOGOUT') {
+                setCart([])
+            } else if (type === 'MERGE_STARTED') {
+                // Guardar referencia para no hacer merge duplicado
+                window.mergeInProgress = true
+                setTimeout(() => {
+                    window.mergeInProgress = false
+                }, 5000)
+            }
+        }
+
+        return () => {
+            isMountedRef.current = false
+            channel.close()
+        }
+    }, [loadCart])
+    
+    // ============================================
+    //  EFECTO DE LOGIN
+    // ============================================
+    useEffect(() => {
+        if (userLoading) return
+
+        const currentAuth = isAuthenticated()
+        const previousAuth = previousAuthState.current
+
+        const handleAuthChange = async () => {
+            try {
+                if (currentAuth && previousAuth === false) {
+                    // LOGIN - Web Locks maneja la concurrencia
+                    await syncCartAfterLogin()
+                } else if (!currentAuth && previousAuth === true) {
+                    // LOGOUT
+                    localStorage.removeItem('cart')
+                    setCart([])
+                    notifyOtherTabs('LOGOUT')
+                    toast.success('Sesión cerrada')
+                } else if (!initialLoadDoneRef.current) {
+                    // CARGA INICIAL
+                    if (currentAuth) {
+                        await loadCart()
+                    } else {
+                        setCart(loadLocalCart())
+                        setLoading(false)
+                    }
+                    initialLoadDoneRef.current = true
+                }
+            } catch (error) {
+                console.error(`❌ [${windowIdRef.current}] Error:`, error)
+                setLoading(false)
+            } finally {
+                previousAuthState.current = currentAuth
+            }
+        }
+
+        handleAuthChange()
+    }, [
+        isAuthenticated,
+        userLoading,
+        syncCartAfterLogin,
+        loadCart,
+        loadLocalCart,
+        notifyOtherTabs,
+    ])
+
+    // ============================================
+    //  OPERACIONES
+    // ============================================
+    const addToCart = async (product, quantity = 1) => {
+        try {
+            if (isAuthenticated()) {
+                setLoading(true)
+                const response = await addToCartService(product._id, quantity)
+                if (response.cart?.products) {
+                    setCart(mapRemoteCart(response.cart.products))
+                }
+                toast.success('Producto añadido')
+                notifyOtherTabs('RELOAD_CART')
+            } else {
+                const currentCart = loadLocalCart()
+                const existingItem = currentCart.find(
+                    (i) => i._id === product._id,
+                )
+                const newQuantity = (existingItem?.quantity || 0) + quantity
+                if (newQuantity > product.stock) {
+                    return toast.error(`Stock insuficiente`)
+                }
+                const newCart = existingItem
+                    ? currentCart.map((i) =>
+                          i._id === product._id
+                              ? { ...i, quantity: i.quantity + quantity }
+                              : i,
+                      )
+                    : [...currentCart, { ...product, quantity }]
+                saveLocalCart(newCart)
+                notifyOtherTabs('RELOAD_CART')
+                toast.success('Añadido al carrito local')
+            }
+        } catch (error) {
+            toast.error('Error al añadir')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const updateQuantity = async (productId, newQuantity) => {
+        if (newQuantity < 1) return removeFromCart(productId)
+        try {
+            if (isAuthenticated()) {
+                setLoading(true)
+                const response = await updateCartService(productId, newQuantity)
+                if (response.cart?.products) {
+                    setCart(mapRemoteCart(response.cart.products))
+                }
+                notifyOtherTabs('RELOAD_CART')
+            } else {
+                const newCart = loadLocalCart().map((i) =>
+                    i._id === productId ? { ...i, quantity: newQuantity } : i,
+                )
+                saveLocalCart(newCart)
+                notifyOtherTabs('RELOAD_CART')
+            }
+        } catch (error) {
+            toast.error('Error al actualizar')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const removeFromCart = async (productId) => {
+        try {
+            if (isAuthenticated()) {
+                setLoading(true)
+                const response = await removeFromCartService(productId)
+                if (response.cart?.products) {
+                    setCart(mapRemoteCart(response.cart.products))
+                }
+                notifyOtherTabs('RELOAD_CART')
+            } else {
+                saveLocalCart(
+                    loadLocalCart().filter((i) => i._id !== productId),
+                )
+                notifyOtherTabs('RELOAD_CART')
+            }
+            toast.success('Producto eliminado')
+        } catch (error) {
+            toast.error('Error al eliminar')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const clearCart = async () => {
+        try {
+            if (isAuthenticated()) {
                 setLoading(true)
                 await clearCartService()
                 setCart([])
-                localStorage.removeItem('cart')
-
-                if (connected) {
-                    emitUpdate({ products: [] })
-                }
-
-                toast.success('Carrito vaciado')
-            } catch (error) {
-                console.error('Error al limpiar carrito:', error)
-                toast.error(error.message || 'Error al limpiar carrito')
-            } finally {
-                // 🟢 SIEMPRE liberar loading
-                setLoading(false)
+                notifyOtherTabs('RELOAD_CART')
+            } else {
+                saveLocalCart([])
+                notifyOtherTabs('RELOAD_CART')
             }
-        } else {
-            setCart([])
-            saveLocalCart([])
-            broadcastUpdate([])
             toast.success('Carrito vaciado')
+        } catch (error) {
+            toast.error('Error al vaciar')
+        } finally {
+            setLoading(false)
         }
-    }, [isAuthenticated, saveLocalCart, connected, emitUpdate, broadcastUpdate])
+    }
+
+    // ============================================
+    // 📊 TOTALES
+    // ============================================
+    const total = useMemo(
+        () =>
+            Number(
+                cart
+                    .reduce((acc, i) => acc + i.price * i.quantity, 0)
+                    .toFixed(2),
+            ),
+        [cart],
+    )
+
+    const itemsQuantity = useMemo(
+        () => cart.reduce((acc, i) => acc + (i.quantity || 0), 0),
+        [cart],
+    )
 
     const value = {
         cart,
-        setCart,
         total,
         itemsQuantity,
         isModalOpen,
         loading,
-        connected,
         addToCart,
         removeFromCart,
         clearCart,
@@ -666,12 +420,6 @@ export const CartContextProvider = ({ children }) => {
         closeModal,
         loadCart,
     }
-
-    console.log('📦 CartContext value:', {
-        hasSetCart: !!value.setCart,
-        hasCart: !!value.cart,
-        keys: Object.keys(value),
-    })
 
     return <CartContext.Provider value={value}>{children}</CartContext.Provider>
 }
