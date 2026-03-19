@@ -1,3 +1,4 @@
+// frontend/src/services/orderServices.js
 import axios from 'axios'
 
 const API_URL = import.meta.env.VITE_BACKEND_URL + '/orders'
@@ -13,26 +14,45 @@ export const createOrder = async (orderData) => {
         const response = await axios.post(`${API_URL}/create`, orderData, config)
         return response.data
     } catch (error) {
-        throw new Error('Error al crear la orden')
+        console.error('❌ Error en createOrder:', error.response?.data || error.message);
+        throw new Error(error.response?.data?.message || 'Error al crear la orden');
     }
 }
 
-// NUEVA: Obtener detalles de una orden por Session ID de Stripe
+// Obtener detalles de una orden por Session ID de Stripe
 export const getOrderBySession = async (sessionId) => {
     try {
         const response = await axios.get(`${API_URL}/session/${sessionId}`, config)
         return response.data
     } catch (error) {
-        throw new Error('Error al obtener los detalles de la sesión')
+        console.error('❌ Error en getOrderBySession:', error.response?.data || error.message);
+        throw new Error(error.response?.data?.message || 'Error al obtener los detalles de la sesión');
     }
 }
 
-// NUEVA: Obtener todas las órdenes de un usuario
-export const getUserOrders = async (userId) => {
+// 🔴 MODIFICADO: Ya no necesita userId como parámetro
+export const getUserOrders = async () => {
+    try {
+        console.log('🔍 Solicitando órdenes del usuario autenticado...');
+        console.log('   URL:', `${API_URL}/user/orders`);
+        
+        const response = await axios.get(`${API_URL}/user/orders`, config)
+        
+        console.log('✅ Respuesta recibida:', response.data);
+        return response.data
+    } catch (error) {
+        console.error('❌ Error en getUserOrders:', error.response?.data || error.message);
+        throw new Error(error.response?.data?.message || 'Error al obtener el historial de órdenes');
+    }
+}
+
+// Opcional: Para admins que necesiten ver órdenes de otros usuarios
+export const getUserOrdersByAdmin = async (userId) => {
     try {
         const response = await axios.get(`${API_URL}/user/${userId}`, config)
         return response.data
     } catch (error) {
-        throw new Error('Error al obtener el historial de órdenes')
+        console.error('❌ Error en getUserOrdersByAdmin:', error.response?.data || error.message);
+        throw new Error(error.response?.data?.message || 'Error al obtener las órdenes del usuario');
     }
 }

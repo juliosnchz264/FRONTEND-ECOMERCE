@@ -31,8 +31,9 @@ export const CartContextProvider = ({ children }) => {
     const previousAuthState = useRef(null)
     const cartRef = useRef([])
 
-    const windowIdRef = useRef(Math.random().toString(36).substring(7))
-
+    const windowIdRef = useRef(
+        window.name ? parseInt(window.name) || Math.random() : Math.random(),
+    )
     useEffect(() => {
         cartRef.current = cart
     }, [cart])
@@ -98,7 +99,7 @@ export const CartContextProvider = ({ children }) => {
     )
 
     // ============================================
-    //  FUNCIÓN DE BROADCAST 
+    //  FUNCIÓN DE BROADCAST
     // ============================================
     const notifyOtherTabs = useCallback((type, additionalData = {}) => {
         if (broadcastChannelRef.current) {
@@ -114,86 +115,75 @@ export const CartContextProvider = ({ children }) => {
     }, [])
 
     // ============================================
-    //  FUSIÓN POST-LOGIN 
+    //  FUSIÓN POST-LOGIN
     // ============================================
     const syncCartAfterLogin = useCallback(async () => {
         const guestItems = loadLocalCart()
         setLoading(true)
 
         try {
-            // Verificar si Web Locks está disponible
             const webLocksAvailable =
                 navigator &&
                 navigator.locks &&
                 typeof navigator.locks.request === 'function'
 
+            if (!guestItems.length) {
+                const currentCart = await getCartService()
+                setCart(mapRemoteCart(currentCart.cart?.products))
+                return
+            }
+
             if (webLocksAvailable) {
-                await navigator.locks.request(
-                    'cart-merge-lock',
-                    async (lock) => {
-                        // SIEMPRE hacer merge si hay items de invitado
-                        if (guestItems.length > 0) {
-                            const response = await mergeCartsService(guestItems)
-                            localStorage.removeItem('cart')
-
-                            if (response.cart?.products) {
-                                const mergedItems = mapRemoteCart(
-                                    response.cart.products,
-                                )
-                                setCart(mergedItems)
-                                toast.success('¡Carrito sincronizado!')
-                            }
-                        } else {
-                            // Si no hay items de invitado, solo cargar
-                            const currentCart = await getCartService()
-                            setCart(mapRemoteCart(currentCart.cart?.products))
-                        }
-                    },
-                )
-            } else {
-                // Notificar que vamos a hacer merge
-                notifyOtherTabs('MERGE_STARTED', {
-                    windowId: windowIdRef.current,
-                })
-
-                // Esperar para ver si alguien más ya empezó
-                await new Promise((r) => setTimeout(r, 300))
-
-                // 🚨 SIEMPRE hacer merge si hay items de invitado
-                if (guestItems.length > 0) {
-                    // Verificar si ya hay un merge en progreso de otra ventana
-                    if (!window.mergeInProgress) {
-                        window.mergeInProgress = true
-
+                await navigator.locks.request('cart-merge-lock', async () => {
+                    // SOLO la ventana secundaria hace el merge
+                    if (windowIdRef.current !== 0) {
                         const response = await mergeCartsService(guestItems)
+                        if (response.adjustedProducts?.length > 0) {
+                            toast.error(
+                                'Algunos productos se ajustaron por falta de stock',
+                            )
+                        }
+
                         localStorage.removeItem('cart')
 
                         if (response.cart?.products) {
-                            const mergedItems = mapRemoteCart(
-                                response.cart.products,
-                            )
-                            setCart(mergedItems)
+                            setCart(mapRemoteCart(response.cart.products))
                             toast.success('¡Carrito sincronizado!')
                         }
 
-                        setTimeout(() => {
-                            window.mergeInProgress = false
-                        }, 5000)
-                    } else {
-                        // Esperar y recargar
-                        await new Promise((r) => setTimeout(r, 1000))
-                        const currentCart = await getCartService()
-                        setCart(mapRemoteCart(currentCart.cart?.products))
+                        notifyOtherTabs('RELOAD_CART')
                     }
+                })
+            } else {
+                // fallback sin Web Locks
+                if (!window.mergeInProgress) {
+                    window.mergeInProgress = true
+                    const response = await mergeCartsService(guestItems)
+
+                    if (response.adjustedProducts?.length > 0) {
+                        toast.error(
+                            'Algunos productos se ajustaron por falta de stock',
+                        )
+                    }
+
+                    localStorage.removeItem('cart')
+
+                    if (response.cart?.products) {
+                        setCart(mapRemoteCart(response.cart.products))
+                        toast.success('¡Carrito sincronizado!')
+                    }
+
+                    notifyOtherTabs('RELOAD_CART')
+
+                    setTimeout(() => {
+                        window.mergeInProgress = false
+                    }, 5000)
                 } else {
-                    // Si no hay items de invitado, solo cargar
+                    // solo recarga carrito si merge está en progreso
                     const currentCart = await getCartService()
                     setCart(mapRemoteCart(currentCart.cart?.products))
                 }
             }
-
-            // Notificar a otras pestañas que recarguen
-            notifyOtherTabs('RELOAD_CART')
         } catch (error) {
             console.error(`❌ [${windowIdRef.current}] Error:`, error)
             toast.error('Error al sincronizar')
@@ -233,7 +223,7 @@ export const CartContextProvider = ({ children }) => {
             channel.close()
         }
     }, [loadCart])
-    
+
     // ============================================
     //  EFECTO DE LOGIN
     // ============================================
@@ -316,7 +306,7 @@ export const CartContextProvider = ({ children }) => {
                 toast.success('Añadido al carrito local')
             }
         } catch (error) {
-            toast.error('Error al añadir')
+            toast.error(error.message || 'Error al añadir')
         } finally {
             setLoading(false)
         }

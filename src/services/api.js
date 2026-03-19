@@ -9,53 +9,24 @@ const api = axios.create({
   }
 });
 
-// Lista de rutas que NO deben redirigir al login
-const publicRoutes = [
-  '/auth/login',
-  '/auth/register',
-  '/auth/refresh',
-  '/auth/verify',
-  '/auth/resend-verification',
-  '/products',
-  '/categories'
-];
-
-// Interceptor para manejar errores globalmente
+// 🚨 Interceptor para SILENCIAR COMPLETAMENTE los 401 de check-session
 api.interceptors.response.use(
   response => response,
   error => {
-    const originalRequest = error.config;
+    const isAuthCheck = error.config?.url?.includes('/auth/check-session');
     
-    // No redirigir si es una ruta pública
-    const isPublicRoute = publicRoutes.some(route => 
-      originalRequest.url.includes(route)
-    );
-    
-    // No redirigir si es una petición que esperamos que falle (como check-session)
-    const isAuthCheck = originalRequest.url.includes('/auth/check-session');
-    
-    if (error.response) {
-      switch (error.response.status) {
-        case 401:
-          // Solo redirigir si NO es ruta pública y NO es check de autenticación
-          if (!isPublicRoute && !isAuthCheck && !originalRequest.url.includes('/auth/refresh')) {
-            console.log('🚫 No autorizado, redirigiendo a login...');
-            localStorage.removeItem('userInfo');
-            localStorage.removeItem('wasAuthenticated');
-            window.location.href = '/login';
-          } else {
-            console.log('ℹ️ 401 ignorado (ruta pública o check de auth):', originalRequest.url);
-          }
-          break;
-        case 403:
-          if (!isPublicRoute) {
-            window.location.href = '/forbidden';
-          }
-          break;
-        default:
-          console.error('Error:', error.response.data);
-      }
+    // Si es check-session con 401, DEVOLVER RESPUESTA FALSA
+    if (isAuthCheck && error.response?.status === 401) {
+      // Esto evita que Axios muestre el error en consola
+      return Promise.resolve({ 
+        data: { user: null },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: error.config
+      });
     }
+    
     return Promise.reject(error);
   }
 );
