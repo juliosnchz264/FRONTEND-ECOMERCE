@@ -10,10 +10,7 @@ export const useBroadcastAuth = () => {
         const channel = new BroadcastChannel(BROADCAST_CHANNEL);
         channelRef.current = channel;
 
-        console.log('📻 BroadcastChannel creado:', BROADCAST_CHANNEL);
-
         return () => {
-            console.log('📻 BroadcastChannel cerrado');
             channel.close();
             channelRef.current = null;
         };
@@ -24,11 +21,10 @@ export const useBroadcastAuth = () => {
             const message = {
                 type: 'LOGIN',
                 user: userData,
-                token: token,  // 👈 incluir token
+                token: token,
                 timestamp: Date.now()
             };
             channelRef.current.postMessage(message);
-            console.log('📤 Broadcast - Login enviado:', message);
         }
     }, []);
 
@@ -39,14 +35,12 @@ export const useBroadcastAuth = () => {
                 timestamp: Date.now()
             };
             channelRef.current.postMessage(message);
-            console.log('📤 Broadcast - Logout enviado:', message);
         }
     }, []);
 
     const onMessage = useCallback((callback) => {
         if (channelRef.current) {
             channelRef.current.onmessage = (event) => {
-                console.log('📥 Broadcast - Mensaje recibido:', event.data);
                 callback(event.data);
             };
         }

@@ -1,80 +1,294 @@
-import {
-    useState,
-    useEffect,
-    useCallback,
-    createContext,
-} from 'react'
-import axios from 'axios'
-
-// Configuración global de axios para enviar cookies en todas las peticiones
-axios.defaults.withCredentials = true
-
-const API_URL = import.meta.env.VITE_BACKEND_URL + '/products'
-const CATEGORIES_URL = import.meta.env.VITE_BACKEND_URL + '/categories'
+// src/Context/ProductContext.jsx
+import { useState, useEffect, useCallback, createContext, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import productService from '../services/productServices.js'
+import categoryService from '../services/categoryServices.js'
+import subcategoryService from '../services/subcategoryServices.js'
 
 export const ProductContext = createContext({})
 
 export const ProductContextProvider = ({ children }) => {
-    // Estados existentes
-    const [allProducts, setAllProducts] = useState([])
-    const [filteredProducts, setFilteredProducts] = useState([])
-    const [selectedCategory, setSelectedCategory] = useState('Todos')
-    const [selectedSubcategory, setSelectedSubcategory] = useState(null)
-    
-    // Estados para categorías
+    const [searchParams, setSearchParams] = useSearchParams()
+
+    // Estados - leer directamente de searchParams
+    const [selectedCategory, setSelectedCategory] = useState(
+        searchParams.get('categoria') || 'Todos',
+    )
+    const [selectedSubcategory, setSelectedSubcategory] = useState(
+        searchParams.get('subcategoria') || null,
+    )
+    const [currentPage, setCurrentPage] = useState(() => {
+        const page = parseInt(searchParams.get('page'))
+        return Number.isFinite(page) && page >= 1 ? page : 1
+    })
+
+    const [products, setProducts] = useState([])
+    const [productsLoading, setProductsLoading] = useState(true)
+    const [error, setError] = useState(null)
+    const [totalPages, setTotalPages] = useState(1)
+    const [totalProducts, setTotalProducts] = useState(0)
+    const [itemsPerPage, setItemsPerPage] = useState(15)
+
+    // Categorías y subcategorías
     const [categories, setCategories] = useState([])
     const [categoriesLoading, setCategoriesLoading] = useState(false)
-    
-    const [productsLoading, setProductsLoading] = useState(true)
-    const [product, setProduct] = useState({})
-    const [productLoading, setProductLoading] = useState(true)
-    const [error, setError] = useState(null)
+    const [subcategories, setSubcategories] = useState([])
 
-    // Función para obtener productos
-    const getProducts = useCallback(async () => {
+    // Refs para evitar fetch duplicado y ciclos
+    const isFetchingRef = useRef(false)
+    const lastFetchKeyRef = useRef('')
+    const isUpdatingFromUrlRef = useRef(false)
+
+    // Cargar categorías usando categoryService
+    const getCategories = useCallback(async () => {
+        setCategoriesLoading(true)
+        const result = await categoryService.getCategories()
+        if (result.success) {
+            setCategories(result.categories)
+        } else {
+            console.error('Error cargando categorías:', result.error)
+        }
+        setCategoriesLoading(false)
+        return result.categories
+    }, [])
+
+    // Cargar subcategorías usando subcategoryService
+    const getSubcategories = useCallback(async () => {
+        const result = await subcategoryService.getSubcategories()
+        if (result.success) {
+            setSubcategories(result.subcategories)
+        } else {
+            console.error('Error cargando subcategorías:', result.error)
+        }
+        return result.subcategories
+    }, [])
+
+    // Obtener ID de subcategoría por nombre
+    const getSubcategoryIdFromName = useCallback(
+        (name) => {
+            if (!name) return null
+            const subcat = subcategories.find((s) => s.name === name)
+            return subcat ? subcat._id : null
+        },
+        [subcategories],
+    )
+
+    // Obtener nombre de subcategoría por ID
+    const getSubcategoryNameFromId = useCallback(
+        (id) => {
+            if (!id) return null
+            const subcat = subcategories.find((s) => s._id === id)
+            return subcat ? subcat.name : null
+        },
+        [subcategories],
+    )
+
+    // Función para obtener productos usando productService
+    const fetchProducts = useCallback(async () => {
+        // Convertir subcategoría de nombre a ID si es necesario
+        const subcategoryId =
+            selectedSubcategory && !/^[0-9a-fA-F]{24}$/.test(selectedSubcategory)
+                ? getSubcategoryIdFromName(selectedSubcategory)
+                : selectedSubcategory
+
+        const fetchKey = `${currentPage}-${itemsPerPage}-${selectedCategory}-${subcategoryId || 'none'}`
+
+        // Evitar fetch duplicado
+        if (isFetchingRef.current && lastFetchKeyRef.current === fetchKey) {
+            return
+        }
+
+        isFetchingRef.current = true
+        lastFetchKeyRef.current = fetchKey
+
         try {
             setProductsLoading(true)
-            const response = await axios.get(API_URL)
-            setAllProducts(response.data)
-            setFilteredProducts(response.data)
-            return response.data
+            setError(null)
+
+            const result = await productService.getProducts({
+                page: currentPage,
+                limit: itemsPerPage,
+                category: selectedCategory !== 'Todos' ? selectedCategory : undefined,
+                subcategory: subcategoryId,
+            })
+
+            if (result.success) {
+                setProducts(result.products)
+                setTotalPages(result.totalPages)
+                setTotalProducts(result.totalProducts)
+            } else {
+                setError(result.error)
+            }
         } catch (error) {
-            console.error('❌ FETCH - Error:', error);
-            setError(error.message || 'Error al obtener los productos')
-            return []
+            console.error('Error fetching products:', error)
+            setError(error.message || 'Error al obtener productos')
         } finally {
             setProductsLoading(false)
+            setTimeout(() => {
+                isFetchingRef.current = false
+            }, 100)
         }
-    }, [])
+    }, [
+        currentPage,
+        itemsPerPage,
+        selectedCategory,
+        selectedSubcategory,
+        getSubcategoryIdFromName,
+    ])
 
-    // Función para obtener categorías
-    const getCategories = useCallback(async () => {
-        try {
-            setCategoriesLoading(true)
-            const response = await axios.get(CATEGORIES_URL)
-            setCategories(response.data)
-            return response.data
-        } catch (error) {
-            console.error('❌ FRONTEND: Error completo:', error)
-            return []
-        } finally {
-            setCategoriesLoading(false)
+    // 👉 EFECTO: Sincronizar URL con estado
+    useEffect(() => {
+        if (isUpdatingFromUrlRef.current) return
+
+        const urlCategory = searchParams.get('categoria') || 'Todos'
+        let urlSubcategory = searchParams.get('subcategoria') || null
+        const parsedPage = parseInt(searchParams.get('page'))
+        const urlPage = Number.isFinite(parsedPage) && parsedPage >= 1 ? parsedPage : 1
+
+        // Convertir ID a nombre si es necesario
+        if (urlSubcategory && /^[0-9a-fA-F]{24}$/.test(urlSubcategory)) {
+            const name = getSubcategoryNameFromId(urlSubcategory)
+            if (name) urlSubcategory = name
         }
-    }, [])
 
-    // Función de filtrado por categoría
-    const filterByCategory = useCallback((categoryName, subcategoryId = null) => {
-        setSelectedCategory(categoryName);
-        setSelectedSubcategory(subcategoryId);
-    }, []);
+        isUpdatingFromUrlRef.current = true
+
+        let needsUpdate = false
+
+        if (selectedCategory !== urlCategory) {
+            setSelectedCategory(urlCategory)
+            needsUpdate = true
+        }
+
+        if (selectedSubcategory !== urlSubcategory) {
+            setSelectedSubcategory(urlSubcategory)
+            needsUpdate = true
+        }
+
+        if (currentPage !== urlPage) {
+            setCurrentPage(urlPage)
+            needsUpdate = true
+        }
+
+        if (needsUpdate) {
+            // URL synced with state
+        }
+        
+        setTimeout(() => {
+            isUpdatingFromUrlRef.current = false
+        }, 100)
+    }, [searchParams, selectedCategory, selectedSubcategory, currentPage, getSubcategoryNameFromId])
+
+    // 👉 EFECTO: Cargar productos cuando cambian los parámetros
+    useEffect(() => {
+        fetchProducts()
+    }, [fetchProducts])
+
+    // Cargar categorías y subcategorías al inicio
+    useEffect(() => {
+        getCategories()
+        getSubcategories()
+    }, [getCategories, getSubcategories])
+
+    // Funciones de navegación - SOLO actualizan la URL
+    const goToPage = useCallback(
+        (page) => {
+            if (page >= 1 && page <= totalPages && page !== currentPage) {
+                isUpdatingFromUrlRef.current = true
+
+                const newParams = new URLSearchParams(searchParams)
+                if (page !== 1) {
+                    newParams.set('page', page.toString())
+                } else {
+                    newParams.delete('page')
+                }
+
+                setSearchParams(newParams, { replace: true })
+                setCurrentPage(page)
+
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+
+                setTimeout(() => {
+                    isUpdatingFromUrlRef.current = false
+                }, 100)
+            }
+        },
+        [currentPage, totalPages, searchParams, setSearchParams],
+    )
+
+    const filterByCategory = useCallback(
+        (categoryName, subcategoryParam = null) => {
+            isUpdatingFromUrlRef.current = true
+
+            const newParams = new URLSearchParams()
+
+            if (categoryName && categoryName !== 'Todos') {
+                newParams.set('categoria', categoryName)
+            }
+
+            let subcategoryValue = subcategoryParam
+            if (
+                subcategoryParam &&
+                /^[0-9a-fA-F]{24}$/.test(subcategoryParam)
+            ) {
+                const name = getSubcategoryNameFromId(subcategoryParam)
+                if (name) {
+                    subcategoryValue = name
+                }
+            }
+
+            if (subcategoryValue) {
+                newParams.set('subcategoria', subcategoryValue)
+            }
+
+            newParams.set('page', '1')
+
+            setSearchParams(newParams, { replace: true })
+
+            setSelectedCategory(categoryName)
+            setSelectedSubcategory(subcategoryValue)
+            setCurrentPage(1)
+
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+
+            setTimeout(() => {
+                isUpdatingFromUrlRef.current = false
+            }, 100)
+        },
+        [setSearchParams, getSubcategoryNameFromId],
+    )
+
+    const resetFilters = useCallback(() => {
+        setSearchParams({ page: '1' }, { replace: true })
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }, [setSearchParams])
+
+    const changeItemsPerPage = useCallback(
+        (newLimit) => {
+            setItemsPerPage(newLimit)
+            const newParams = new URLSearchParams(searchParams)
+            newParams.set('page', '1')
+            setSearchParams(newParams, { replace: true })
+        },
+        [searchParams, setSearchParams],
+    )
+
+    // Producto individual (solo lectura)
+    const [product, setProduct] = useState({})
+    const [productLoading, setProductLoading] = useState(false)
 
     const getProductById = useCallback(async (id) => {
         setProductLoading(true)
         setProduct({})
         try {
-            const response = await axios.get(`${API_URL}/${id}`)
-            setProduct(response.data)
-            return response.data
+            const result = await productService.getProductById(id)
+            if (result.success) {
+                setProduct(result.product)
+                return result.product
+            } else {
+                setError(result.error)
+                return null
+            }
         } catch (error) {
             setError(error.message || 'Error al obtener el producto')
             return null
@@ -83,235 +297,41 @@ export const ProductContextProvider = ({ children }) => {
         }
     }, [])
 
-    // 🚀 VERSIÓN CORREGIDA - SOLO COOKIES, SIN LOCALSTORAGE
-    const updateProduct = useCallback(async (id, data) => {
-        console.log('📦 updateProduct recibió:', data);
-
-        try {
-            // ✅ ELIMINADO: const token = localStorage.getItem('token');
-            // ✅ Las cookies se envían automáticamente gracias a withCredentials: true
-
-            const response = await axios.put(`${API_URL}/${id}`, data, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    // ✅ NO NECESITAMOS Authorization header
-                }
-            });
-
-            if (response.status === 200) {
-                const updatedProduct = response.data.product || response.data
-                
-                console.log('✅ Producto actualizado:', updatedProduct)
-                
-                // Actualizar el producto en el estado
-                setProduct(updatedProduct)
-                
-                // Actualizar en allProducts
-                setAllProducts((prev) => {
-                    const newProducts = prev.map((p) => 
-                        p._id === id ? updatedProduct : p
-                    )
-                    return newProducts
-                })
-                
-                return { 
-                    success: true, 
-                    message: response.data.message || 'Producto actualizado',
-                    data: updatedProduct 
-                }
-            }
-        } catch (error) {
-            console.error('❌ Error al actualizar:', {
-                status: error.response?.status,
-                data: error.response?.data,
-                message: error.message
-            });
-            
-            // Manejar error 401 específicamente
-            if (error.response?.status === 401) {
-                return { 
-                    success: false, 
-                    message: 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.' 
-                };
-            }
-            
-            return { 
-                success: false, 
-                message: error.response?.data?.message || 'Error al actualizar' 
-            };
-        }
-    }, []);
-
-    // 🚀 VERSIÓN CORREGIDA - SOLO COOKIES
-    const createProduct = useCallback(async (data) => {
-        console.log('📦 createProduct recibió:', data);
-
-        try {
-            // ✅ ELIMINADO: const token = localStorage.getItem('token');
-
-            const response = await axios.post(API_URL, data, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    // ✅ SIN Authorization header
-                }
-            });
-            
-            if (response.status === 201) {
-                const newProduct = response.data.product || response.data
-                console.log('✅ Producto creado:', newProduct)
-                
-                setAllProducts((prev) => [...prev, newProduct])
-                
-                if (selectedCategory) {
-                    filterByCategory(selectedCategory, selectedSubcategory);
-                }
-                
-                return { 
-                    success: true, 
-                    message: response.data.message || 'Producto creado exitosamente',
-                    data: newProduct
-                }
-            }
-        } catch (error) {
-            console.error('❌ Error en createProduct:', error.response?.data || error.message)
-            
-            if (error.response?.status === 401) {
-                return { 
-                    success: false, 
-                    message: 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.' 
-                };
-            }
-            
-            return { 
-                success: false, 
-                message: error.response?.data?.message || 'Error al crear el producto',
-                error: error.response?.data
-            }
-        }
-    }, [selectedCategory, selectedSubcategory, filterByCategory]);
-
-    // 🚀 VERSIÓN CORREGIDA - SOLO COOKIES
-    const deleteProduct = useCallback(async (id) => {
-        try {
-            // ✅ ELIMINADO: const token = localStorage.getItem('token');
-
-            const response = await axios.delete(`${API_URL}/${id}`, {
-                headers: {
-                    // ✅ SIN Authorization header
-                }
-            });
-            
-            if (response.status === 200) {
-                console.log('🗑️ Producto eliminado:', id)
-                setAllProducts((prev) => prev.filter((p) => p._id !== id))
-                
-                if (selectedCategory) {
-                    filterByCategory(selectedCategory, selectedSubcategory);
-                }
-                
-                return { 
-                    success: true, 
-                    message: response.data.message || 'Producto eliminado' 
-                }
-            }
-        } catch (error) {
-            console.error('Error al eliminar:', error.response?.data)
-            
-            if (error.response?.status === 401) {
-                return { 
-                    success: false, 
-                    message: 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.' 
-                };
-            }
-            
-            return { 
-                success: false, 
-                message: error.response?.data?.message || 'Error al eliminar' 
-            }
-        }
-    }, [selectedCategory, selectedSubcategory, filterByCategory]);
-
-    // Efecto para filtrar cuando cambian las dependencias
-    useEffect(() => {
-        if (allProducts.length === 0) {
-            setFilteredProducts([]);
-            return;
-        }
-
-        if (selectedCategory === 'Todos') {
-            setFilteredProducts(allProducts);
-            return;
-        }
-
-        if (!categories || categories.length === 0) {
-            setFilteredProducts(allProducts);
-            return;
-        }
-
-        let selectedCategoryObj = categories.find(c => {
-            const catName = c.name?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-            const selectedName = selectedCategory?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-            return catName === selectedName;
-        });
-
-        if (!selectedCategoryObj) {
-            selectedCategoryObj = categories.find(c => c._id === selectedCategory);
-        }
-
-        if (!selectedCategoryObj) {
-            setFilteredProducts([]);
-            return;
-        }
-
-        let filtered = allProducts.filter(p => {
-            const productCategoryId = p.category?._id?.toString() || p.category?.toString();
-            return productCategoryId === selectedCategoryObj._id.toString();
-        });
-
-        if (selectedSubcategory) {
-            filtered = filtered.filter(p => {
-                const productSubcategoryId = p.subcategory?._id?.toString() || p.subcategory?.toString();
-                return productSubcategoryId === selectedSubcategory.toString();
-            });
-        }
-
-        setFilteredProducts(filtered);
-
-    }, [allProducts, selectedCategory, selectedSubcategory, categories]);
-
-    // Cargar productos y categorías al montar
-    useEffect(() => {
-        getProducts()
-        getCategories()
-    }, [getProducts, getCategories])
+    // ⚠️ NOTA: createProduct, updateProduct, deleteProduct NO están aquí
+    // Estas funciones están en DashboardProductContext para el admin
 
     const value = {
-        // Productos
+        // Productos (solo lectura)
+        products,
         product,
-        products: filteredProducts,
-        allProducts,
         productsLoading,
         productLoading,
         error,
         
-        // Categorías
+        // Categorías y subcategorías
         categories,
         categoriesLoading,
         getCategories,
+        subcategories,
+        getSubcategories,
         
         // Filtros
         selectedCategory,
         selectedSubcategory,
-        setSelectedCategory,
-        setSelectedSubcategory,
         filterByCategory,
+        resetFilters,
         
-        // Acciones
-        getProducts,
+        // Paginación
+        currentPage,
+        totalPages,
+        totalProducts,
+        itemsPerPage,
+        goToPage,
+        setItemsPerPage: changeItemsPerPage,
+        
+        // Acciones de lectura
         getProductById,
-        updateProduct,
-        createProduct,
-        deleteProduct,
+        getProducts: fetchProducts,
     }
 
     return (

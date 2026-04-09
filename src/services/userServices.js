@@ -1,14 +1,6 @@
-import axios from 'axios'
+import api from './api'
 
-const API_URL = import.meta.env.VITE_BACKEND_URL + '/users'
-
-// Configuración base para axios
-const axiosConfig = {
-    withCredentials: true,
-    headers: {
-        'Content-Type': 'application/json',
-    },
-}
+const API_URL = '/users'
 
 // ============================================
 // SERVICIOS PARA EL PROPIO USUARIO
@@ -20,7 +12,7 @@ const axiosConfig = {
  */
 export const getProfileService = async () => {
     try {
-        const response = await axios.get(`${API_URL}/profile`, axiosConfig)
+        const response = await api.get(`${API_URL}/profile`)
         return response.data
     } catch (error) {
         console.error('Error en getProfileService:', error.response?.data || error.message)
@@ -44,8 +36,7 @@ export const updateProfileService = async (data, file) => {
         if (data.password) formData.append('password', data.password)
         if (file) formData.append('avatar', file)
 
-        const response = await axios.put(`${API_URL}/profile`, formData, {
-            withCredentials: true,
+        const response = await api.put(`${API_URL}/profile`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
@@ -82,7 +73,7 @@ export const getAllUsersService = async (params = {}) => {
             ? `${API_URL}?${queryParams.toString()}`
             : API_URL
         
-        const response = await axios.get(url, axiosConfig)
+        const response = await api.get(url)
         return response.data
     } catch (error) {
         console.error('Error en getAllUsersService:', error.response?.data || error.message)
@@ -99,7 +90,7 @@ export const getAllUsersService = async (params = {}) => {
  */
 export const getUserByIdService = async (userId) => {
     try {
-        const response = await axios.get(`${API_URL}/${userId}`, axiosConfig)
+        const response = await api.get(`${API_URL}/${userId}`)
         return response.data
     } catch (error) {
         console.error('Error en getUserByIdService:', error.response?.data || error.message)
@@ -116,7 +107,7 @@ export const getUserByIdService = async (userId) => {
  */
 export const getUserByUsernameService = async (username) => {
     try {
-        const response = await axios.get(`${API_URL}/username/${username}`, axiosConfig)
+        const response = await api.get(`${API_URL}/username/${username}`)
         return response.data
     } catch (error) {
         console.error('Error en getUserByUsernameService:', error.response?.data || error.message)
@@ -134,10 +125,9 @@ export const getUserByUsernameService = async (username) => {
  */
 export const updateUserRoleService = async (userId, isAdmin) => {
     try {
-        const response = await axios.patch(
-            `${API_URL}/${userId}/role`, 
-            { isAdmin }, 
-            axiosConfig
+        const response = await api.patch(
+            `${API_URL}/${userId}/role`,
+            { isAdmin }
         )
         return response.data
     } catch (error) {
@@ -155,7 +145,7 @@ export const updateUserRoleService = async (userId, isAdmin) => {
  */
 export const deleteUserService = async (userId) => {
     try {
-        const response = await axios.delete(`${API_URL}/${userId}`, axiosConfig)
+        const response = await api.delete(`${API_URL}/${userId}`)
         return response.data
     } catch (error) {
         console.error('Error en deleteUserService:', error.response?.data || error.message)
@@ -171,7 +161,7 @@ export const deleteUserService = async (userId) => {
  */
 export const getUserStatsService = async () => {
     try {
-        const response = await axios.get(`${API_URL}/stats`, axiosConfig)
+        const response = await api.get(`${API_URL}/stats`)
         return response.data
     } catch (error) {
         console.error('Error en getUserStatsService:', error.response?.data || error.message)

@@ -1,0 +1,32 @@
+# Robots.txt para E-Commerce
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /profile/
+Disallow: /checkout/
+Disallow: /payment/
+Disallow: /verify-email
+Disallow: /verify-email-pending
+Disallow: /api/
+
+# Sitemap
+Sitemap: https://tusitio.com/sitemap.xml
+
+# Crawl-delay
+Crawl-delay: 10
+
+# Host
+Host: https://tusitio.com
+
+# User-agent: Googlebot
+User-agent: Googlebot
+Allow: /
+Disallow: /admin/
+Disallow: /profile/
+Disallow: /checkout/
+
+# User-agent: Bingbot
+User-agent: Bingbot
+Allow: /
+Disallow: /admin/
+Disallow: /profile/

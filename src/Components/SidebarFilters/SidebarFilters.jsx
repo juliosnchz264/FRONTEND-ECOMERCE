@@ -1,124 +1,125 @@
-import { useState } from 'react';
-import { useProduct } from '../../Hooks/useProduct.js';
-import { FiFilter, FiX } from 'react-icons/fi';
-import { FaChevronDown, FaChevronRight, FaTag, FaLayerGroup } from 'react-icons/fa';
-import { BsStars } from 'react-icons/bs';
-import axios from 'axios';
+// src/Components/SidebarFilters/SidebarFilters.jsx
+import { useState } from 'react'
+import { useProduct } from '../../Hooks/useProduct'
+import { FiFilter, FiX } from 'react-icons/fi'
+import {
+    FaChevronDown,
+    FaChevronRight,
+    FaTag,
+    FaLayerGroup,
+} from 'react-icons/fa'
+import { BsStars } from 'react-icons/bs'
+import api from '../../services/api'
 
-const API_URL = import.meta.env.VITE_BACKEND_URL;
+const SidebarFilters = ({ onOpenChange, isOpen: externalIsOpen, onFilter }) => {
+    const {
+        selectedCategory,
+        selectedSubcategory,
+        categories: dbCategories,
+    } = useProduct()
+    const [internalIsOpen, setInternalIsOpen] = useState(false)
+    const [expandedCategory, setExpandedCategory] = useState(null)
+    const [subcategories, setSubcategories] = useState({})
+    const [loadingSubcategories, setLoadingSubcategories] = useState({})
 
-const SidebarFilters = () => {
-    const { filterByCategory, selectedCategory, selectedSubcategory, categories: dbCategories } = useProduct();
-    const [isOpen, setIsOpen] = useState(false);
-    const [expandedCategory, setExpandedCategory] = useState(null);
-    const [subcategories, setSubcategories] = useState({});
-    const [loadingSubcategories, setLoadingSubcategories] = useState({});
+    const isOpen =
+        externalIsOpen !== undefined ? externalIsOpen : internalIsOpen
 
     const toggleSidebar = () => {
-        setIsOpen(!isOpen);
-    };
-
-    // Cargar subcategorías cuando se expande una categoría
-    const loadSubcategories = async (categoryId) => {
-        if (!categoryId) return;
-        
-        if (subcategories[categoryId]) return;
-        
-        try {
-            setLoadingSubcategories(prev => ({ ...prev, [categoryId]: true }));
-            
-            const response = await axios.get(
-                `${API_URL}/subcategories/category/${categoryId}`
-            );
-            
-            setSubcategories(prev => ({
-                ...prev,
-                [categoryId]: response.data
-            }));
-        } catch (error) {
-            console.error('Error cargando subcategorías:', error);
-        } finally {
-            setLoadingSubcategories(prev => ({ ...prev, [categoryId]: false }));
+        if (onOpenChange) {
+            onOpenChange(!isOpen)
+        } else {
+            setInternalIsOpen(!internalIsOpen)
         }
-    };
+    }
+
+    const loadSubcategories = async (categoryId) => {
+        if (!categoryId) return
+        if (subcategories[categoryId]) return
+
+        try {
+            setLoadingSubcategories((prev) => ({ ...prev, [categoryId]: true }))
+            const response = await api.get(
+                `/subcategories/category/${categoryId}`,
+            )
+            setSubcategories((prev) => ({
+                ...prev,
+                [categoryId]: response.data,
+            }))
+        } catch (error) {
+            console.error('Error cargando subcategorías:', error)
+        } finally {
+            setLoadingSubcategories((prev) => ({
+                ...prev,
+                [categoryId]: false,
+            }))
+        }
+    }
 
     const handleCategoryClick = (cat) => {
         if (cat === 'todos' || cat === 'Todos') {
-            filterByCategory('Todos', null);
-            setExpandedCategory(null);
-            setIsOpen(false);
-            return;
+            if (onFilter) {
+                onFilter('Todos', null)
+            }
+            setExpandedCategory(null)
+            toggleSidebar()
+            return
         }
 
         if (expandedCategory === cat._id) {
-            setExpandedCategory(null);
+            setExpandedCategory(null)
         } else {
-            setExpandedCategory(cat._id);
-            loadSubcategories(cat._id);
+            setExpandedCategory(cat._id)
+            loadSubcategories(cat._id)
         }
-    };
+    }
 
     const handleMainCategoryClick = (cat) => {
-        filterByCategory(cat.name, null);
-        setIsOpen(false);
-    };
+        if (onFilter) {
+            onFilter(cat.name, null)
+        }
+        toggleSidebar()
+    }
 
-    const handleSubcategoryClick = (subcat) => {        
+    const handleSubcategoryClick = (subcat) => {
+        let categoryName = null
+
         if (subcat.category && subcat.category.name) {
-            filterByCategory(subcat.category.name, subcat._id);
-        } 
-        else {
-            const parentCategory = dbCategories.find(c => c._id === subcat.category);
+            categoryName = subcat.category.name
+        } else {
+            const parentCategory = dbCategories.find(
+                (c) => c._id === subcat.category,
+            )
             if (parentCategory) {
-                filterByCategory(parentCategory.name, subcat._id);
-            } else {
-                console.error('❌ No se encontró la categoría padre');
+                categoryName = parentCategory.name
             }
         }
-        setIsOpen(false);
-    };
 
-    // FUNCIÓN CORREGIDA - Ahora compara correctamente
-    const isCategorySelected = (catId) => {
-        const category = dbCategories.find(c => c._id === catId);
-        
-        if (selectedSubcategory) {
-            const subcat = Object.values(subcategories)
-                .flat()
-                .find(s => s._id === selectedSubcategory);
-            
-            if (subcat) {
-                const parentCategoryId = subcat.category?._id || subcat.category;
-                return parentCategoryId === catId;
-            }
-            return false;
+        if (categoryName && onFilter) {
+            onFilter(categoryName, subcat.name)
         }
-        
-        if (selectedCategory && selectedCategory !== 'Todos') {
-            return category?.name === selectedCategory;
-        }
-        
-        return false;
-    };
+
+        toggleSidebar()
+    }
 
     return (
         <>
             {/* Botón flotante para móvil */}
             <button
                 onClick={toggleSidebar}
-                className="lg:hidden fixed bottom-6 right-6 z-50 bg-gradient-to-r from-purple-600 to-purple-700 text-white p-4 rounded-full shadow-xl hover:shadow-2xl hover:scale-110 transition-all duration-300 border border-purple-400/20 backdrop-blur-sm"
+                className="lg:hidden fixed bottom-6 right-6 z-50 bg-gradient-to-r from-purple-600 to-purple-700 text-white p-4 rounded-full shadow-xl hover:shadow-2xl hover:scale-110 transition-all duration-300"
                 aria-label="Abrir filtros"
             >
                 <FiFilter className="h-6 w-6" />
                 {selectedCategory !== 'Todos' && (
-                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
                 )}
             </button>
 
-            {/* Overlay para móvil */}
+            {/* Overlay */}
             {isOpen && (
                 <div
-                    className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 animate-fadeIn"
+                    className="lg:hidden fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm z-40 animate-fadeIn"
                     onClick={toggleSidebar}
                 />
             )}
@@ -126,106 +127,108 @@ const SidebarFilters = () => {
             {/* Sidebar */}
             <aside
                 className={`
-                    w-72 flex-shrink-0 bg-white/90 backdrop-blur-sm p-6
-                    transition-all duration-500 ease-out
-                    fixed lg:relative
-                    top-0 left-0
-                    h-full lg:h-auto
-                    z-50 lg:z-auto
-                    overflow-y-auto
-                    shadow-2xl lg:shadow-none
-                    border-r border-purple-100
-                    ${isOpen 
-                        ? 'translate-x-0' 
-                        : '-translate-x-full lg:translate-x-0'
-                    }
-                `}
+          fixed lg:sticky top-0 left-0
+          w-80 h-screen
+          bg-white dark:bg-gray-800 shadow-2xl dark:shadow-gray-950/50
+          transition-transform duration-300 ease-in-out
+          z-[100] lg:z-auto
+          overflow-y-auto
+          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+          lg:translate-x-0
+        `}
             >
-                {/* Header del sidebar */}
-                <div className="flex justify-between items-center mb-8 lg:mb-6">
+                {/* Header */}
+                <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-purple-100 dark:border-gray-700 p-4 flex justify-between items-center z-10 transition-colors duration-300">
                     <div className="flex items-center gap-2">
-                        <div className="p-2 bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl">
-                            <FaLayerGroup className="w-5 h-5 text-purple-600" />
+                        <div className="p-2 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/50 dark:to-pink-900/50 rounded-xl">
+                            <FaLayerGroup className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                         </div>
-                        <h2 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent">
+                        <h2 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-purple-800 dark:from-purple-400 dark:to-purple-600 bg-clip-text text-transparent">
                             Categorías
                         </h2>
                     </div>
                     <button
                         onClick={toggleSidebar}
-                        className="lg:hidden p-2 hover:bg-gray-100 rounded-xl transition-colors"
-                        aria-label="Cerrar filtros"
+                        className="lg:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
                     >
-                        <FiX className="h-5 w-5 text-gray-600" />
+                        <FiX className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                     </button>
                 </div>
 
-                {/* Lista de categorías */}
-                <div className="space-y-1">
+                {/* Contenido */}
+                <div className="p-4">
                     {/* Todos los productos */}
                     <button
                         onClick={() => handleCategoryClick('todos')}
-                        className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 group ${
+                        className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 mb-2 ${
                             selectedCategory === 'Todos' && !selectedSubcategory
-                                ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-200'
-                                : 'text-gray-600 hover:bg-purple-50 hover:text-purple-600'
+                                ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg'
+                                : 'text-gray-600 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-600 dark:hover:text-purple-400'
                         }`}
                     >
                         <div className="flex items-center gap-3">
-                            <div className={`p-1.5 rounded-lg ${
-                                selectedCategory === 'Todos' && !selectedSubcategory
-                                    ? 'bg-white/20'
-                                    : 'bg-gray-100 group-hover:bg-purple-100'
-                            }`}>
-                                <FaTag className={`w-3 h-3 ${
-                                    selectedCategory === 'Todos' && !selectedSubcategory
-                                        ? 'text-white'
-                                        : 'text-gray-400 group-hover:text-purple-600'
-                                }`} />
+                            <div
+                                className={`p-1.5 rounded-lg ${
+                                    selectedCategory === 'Todos' &&
+                                    !selectedSubcategory
+                                        ? 'bg-white/20'
+                                        : 'bg-gray-100 dark:bg-gray-700'
+                                }`}
+                            >
+                                <FaTag
+                                    className={`w-3 h-3 ${
+                                        selectedCategory === 'Todos' &&
+                                        !selectedSubcategory
+                                            ? 'text-white'
+                                            : 'text-gray-400 dark:text-gray-500'
+                                    }`}
+                                />
                             </div>
-                            <span className="font-medium">Todos los productos</span>
+                            <span className="font-medium">
+                                Todos los productos
+                            </span>
                         </div>
                     </button>
 
-                    {/* Categorías dinámicas */}
-                    {dbCategories && dbCategories.map((cat) => (
-                        <div key={cat._id} className="space-y-1">
+                    {/* Categorías */}
+                    {dbCategories?.map((cat) => (
+                        <div key={cat._id} className="mb-2">
                             <div className="flex items-center gap-1">
                                 <button
                                     onClick={() => handleMainCategoryClick(cat)}
-                                    className={`flex-1 text-left px-4 py-3 rounded-xl transition-all duration-200 group ${
-                                        isCategorySelected(cat._id)
-                                            ? selectedSubcategory && isCategorySelected(cat._id)
-                                                ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-md'
-                                                : 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-200'
-                                            : 'text-gray-600 hover:bg-purple-50 hover:text-purple-600'
+                                    className={`flex-1 text-left px-4 py-3 rounded-xl transition-all duration-200 ${
+                                        selectedCategory === cat.name &&
+                                        !selectedSubcategory
+                                            ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg'
+                                            : 'text-gray-600 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-600 dark:hover:text-purple-400'
                                     }`}
                                 >
                                     <div className="flex items-center gap-3">
-                                        <div className={`p-1.5 rounded-lg ${
-                                            isCategorySelected(cat._id)
-                                                ? 'bg-white/20'
-                                                : 'bg-gray-100 group-hover:bg-purple-100'
-                                        }`}>
-                                            <span className="text-xs font-bold">📁</span>
-                                        </div>
-                                        <span className="font-medium">{cat.name}</span>
-                                        {selectedSubcategory && isCategorySelected(cat._id) && (
-                                            <span className="ml-auto text-xs bg-white/20 px-2 py-0.5 rounded-full">
-                                                ▼
+                                        <div
+                                            className={`p-1.5 rounded-lg ${
+                                                selectedCategory === cat.name &&
+                                                !selectedSubcategory
+                                                    ? 'bg-white/20'
+                                                    : 'bg-gray-100 dark:bg-gray-700'
+                                            }`}
+                                        >
+                                            <span className="text-xs font-bold">
+                                                📁
                                             </span>
-                                        )}
+                                        </div>
+                                        <span className="font-medium truncate">
+                                            {cat.name}
+                                        </span>
                                     </div>
                                 </button>
-                                
+
                                 <button
                                     onClick={() => handleCategoryClick(cat)}
                                     className={`p-3 rounded-xl transition-all duration-200 ${
                                         expandedCategory === cat._id
-                                            ? 'bg-purple-100 text-purple-600'
-                                            : 'text-gray-400 hover:bg-gray-100 hover:text-purple-600'
+                                            ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'
+                                            : 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-purple-600 dark:hover:text-purple-400'
                                     }`}
-                                    aria-label="Ver subcategorías"
                                 >
                                     {expandedCategory === cat._id ? (
                                         <FaChevronDown className="h-3 w-3" />
@@ -235,12 +238,12 @@ const SidebarFilters = () => {
                                 </button>
                             </div>
 
-                            {/* Subcategorías expandidas */}
+                            {/* Subcategorías */}
                             {expandedCategory === cat._id && (
-                                <div className="ml-8 pl-3 border-l-2 border-purple-200 space-y-1">
+                                <div className="ml-8 pl-3 border-l-2 border-purple-200 dark:border-purple-800 mt-1">
                                     {loadingSubcategories[cat._id] && (
-                                        <div className="py-3 px-4 text-sm text-purple-500 flex items-center gap-2">
-                                            <span className="loading loading-spinner loading-xs"></span>
+                                        <div className="py-2 px-4 text-sm text-purple-500 dark:text-purple-400">
+                                            <span className="loading loading-spinner loading-xs mr-2"></span>
                                             Cargando...
                                         </div>
                                     )}
@@ -248,78 +251,44 @@ const SidebarFilters = () => {
                                     {subcategories[cat._id]?.map((subcat) => (
                                         <button
                                             key={subcat._id}
-                                            onClick={() => handleSubcategoryClick(subcat)}
-                                            className={`w-full text-left px-4 py-2.5 text-sm rounded-xl transition-all duration-200 ${
-                                                selectedSubcategory === subcat._id
-                                                    ? 'bg-gradient-to-r from-purple-50 to-pink-50 text-purple-700 font-medium border-l-4 border-purple-600'
-                                                    : 'text-gray-500 hover:bg-purple-50 hover:text-purple-600 hover:border-l-4 hover:border-purple-200'
+                                            onClick={() =>
+                                                handleSubcategoryClick(subcat)
+                                            }
+                                            className={`w-full text-left px-4 py-2 text-sm rounded-lg transition-all duration-200 ${
+                                                selectedSubcategory ===
+                                                subcat._id
+                                                    ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 font-medium border-l-4 border-purple-600 dark:border-purple-500'
+                                                    : 'text-gray-500 dark:text-gray-400 hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-600 dark:hover:text-purple-400'
                                             }`}
                                         >
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-xs">▹</span>
+                                            <span className="truncate">
                                                 {subcat.name}
-                                            </div>
+                                            </span>
                                         </button>
                                     ))}
-
-                                    {subcategories[cat._id]?.length === 0 && (
-                                        <div className="py-3 px-4 text-sm text-gray-400 italic">
-                                            Sin subcategorías
-                                        </div>
-                                    )}
                                 </div>
                             )}
                         </div>
                     ))}
-                </div>
 
-                {/* Filtros Avanzados */}
-                <div className="mt-10 pt-8 border-t border-purple-100">
-                    <div className="flex items-center gap-2 mb-6">
-                        <div className="p-2 bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl">
-                            <BsStars className="w-4 h-4 text-purple-600" />
+                    {/* Filtros adicionales */}
+                    <div className="mt-6 pt-6 border-t border-purple-100 dark:border-gray-700">
+                        <div className="flex items-center gap-2 mb-4">
+                            <BsStars className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                            <h3 className="text-sm font-bold text-purple-800 dark:text-purple-300">
+                                Filtros Avanzados
+                            </h3>
                         </div>
-                        <h3 className="text-sm font-bold bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent uppercase tracking-wider">
-                            Filtros Avanzados
-                        </h3>
-                    </div>
-                    
-                    <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-4">
-                        <p className="text-xs text-gray-500 italic flex items-center gap-2">
-                            <span className="w-1 h-1 bg-purple-400 rounded-full"></span>
-                            Próximamente: Rango de precios
-                        </p>
+                        <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 border border-purple-100 dark:border-purple-800">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                                🚀 Próximamente: Rango de precios
+                            </p>
+                        </div>
                     </div>
                 </div>
-
-                {/* Indicador de selección en móvil */}
-                {(selectedCategory && selectedCategory !== 'Todos' || selectedSubcategory) && (
-                    <div className="mt-6 lg:hidden p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
-                        <p className="text-sm text-gray-600 flex items-center gap-2">
-                            <span className="w-2 h-2 bg-purple-600 rounded-full"></span>
-                            {selectedSubcategory ? (
-                                <>
-                                    Subcategoría seleccionada:
-                                    <span className="font-semibold text-purple-700">
-                                        {Object.values(subcategories)
-                                            .flat()
-                                            .find(s => s._id === selectedSubcategory)?.name}
-                                    </span>
-                                </>
-                            ) : (
-                                <>
-                                    Categoría seleccionada:
-                                    <span className="font-semibold text-purple-700">
-                                        {selectedCategory}
-                                    </span>
-                                </>
-                            )}
-                        </p>
-                    </div>
-                )}
             </aside>
         </>
-    );
-};
+    )
+}
 
-export default SidebarFilters;
+export default SidebarFilters

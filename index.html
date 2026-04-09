@@ -1,13 +1,106 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es" data-theme="lofi">
     <head>
-        <meta charset="UTF-8" />
-        <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+        <meta charset="UTF-8npm ru" />
+        <link rel="icon" type="image/svg+xml" href="/logo.svg" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>ecomerce-tazas</title>
+        <meta
+            name="description"
+            content="E-Commerce - Tu tienda online de confianza. Encuentra los mejores productos con los precios más competitivos."
+        />
+        <meta
+            name="keywords"
+            content="ecommerce, tienda online, compras, productos, ofertas"
+        />
+        <meta name="author" content="E-Commerce" />
+        <meta name="robots" content="index, follow" />
+
+        <title>E-Commerce | Tu tienda online de confianza</title>
+
+        <!-- Open Graph / Facebook -->
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="E-Commerce - Tu tienda online" />
+        <meta
+            property="og:description"
+            content="Descubre los mejores productos con los precios más competitivos. Envío gratis en compras mayores a $50."
+        />
+        <meta property="og:image" content="/og-image.jpg" />
+
+        <!-- Twitter -->
+        <meta property="twitter:card" content="summary_large_image" />
+        <meta
+            property="twitter:title"
+            content="E-Commerce - Tu tienda online"
+        />
+        <meta
+            property="twitter:description"
+            content="Descubre los mejores productos con los precios más competitivos."
+        />
+        <meta property="twitter:image" content="/og-image.jpg" />
+        <script>
+            ;(function () {
+                try {
+                    // Leer preferencia guardada
+                    const savedTheme = localStorage.getItem('theme')
+                    // Detectar preferencia del sistema
+                    const prefersDark = window.matchMedia(
+                        '(prefers-color-scheme: dark)',
+                    ).matches
+                    // Determinar tema final
+                    const isDark =
+                        savedTheme === 'dark' || (!savedTheme && prefersDark)
+
+                    // Aplicar clase INMEDIATAMENTE
+                    if (isDark) {
+                        document.documentElement.classList.add('dark')
+                    } else {
+                        document.documentElement.classList.remove('dark')
+                    }
+
+                    // Ocultar contenido hasta que React cargue para evitar flash
+                    const style = document.createElement('style')
+                    style.textContent = '#root { opacity: 0; }'
+                    document.head.appendChild(style)
+
+                    // Mostrar contenido después de que React se monte
+                    window.addEventListener('load', () => {
+                        setTimeout(() => {
+                            style.remove()
+                        }, 50)
+                    })
+                } catch (e) {
+                    console.error('Error al aplicar tema:', e)
+                }
+            })()
+        </script>
+
+        <!-- Estilo de fondo de emergencia -->
+        <style>
+            /* Fondo base para evitar flashes blancos */
+            html,
+            body {
+                background-color: #ffffff;
+                min-height: 100vh;
+                transition: none !important;
+            }
+            html.dark,
+            html.dark body {
+                background-color: #111827;
+            }
+            /* Ocultar contenido inicialmente */
+            #root {
+                opacity: 0;
+                transition: opacity 0.1s ease;
+            }
+            /* Mostrar contenido cuando la página está lista */
+            body.loaded #root {
+                opacity: 1;
+            }
+        </style>
     </head>
     <body>
         <div id="root"></div>
+        <div id="modal-root"></div>
         <script type="module" src="/src/main.jsx"></script>
     </body>
 </html>

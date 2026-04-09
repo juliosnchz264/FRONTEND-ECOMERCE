@@ -1,3 +1,4 @@
+// src/Context/CartContext.jsx
 import {
     createContext,
     useState,
@@ -20,27 +21,30 @@ import { toast } from 'react-hot-toast'
 export const CartContext = createContext({})
 
 export const CartContextProvider = ({ children }) => {
+    // ===== ESTADOS =====
     const [cart, setCart] = useState([])
     const [loading, setLoading] = useState(true)
     const [isModalOpen, setIsModalOpen] = useState(false)
-    const { isAuthenticated, userLoading } = useUser()
 
+    // ===== HOOKS =====
+    const { isAuthenticated, loading: userLoading } = useUser()
+
+    // ===== REFS =====
     const broadcastChannelRef = useRef(null)
     const isMountedRef = useRef(true)
     const initialLoadDoneRef = useRef(false)
     const previousAuthState = useRef(null)
     const cartRef = useRef([])
-
     const windowIdRef = useRef(
         window.name ? parseInt(window.name) || Math.random() : Math.random(),
     )
+
+    // ===== Sincronizar ref con estado =====
     useEffect(() => {
         cartRef.current = cart
     }, [cart])
 
-    // ============================================
-    // 💾 HELPERS
-    // ============================================
+    // ===== HELPERS =====
     const loadLocalCart = useCallback(
         () => JSON.parse(localStorage.getItem('cart') || '[]'),
         [],
@@ -69,38 +73,7 @@ export const CartContextProvider = ({ children }) => {
         )
     }, [])
 
-    // ============================================
-    //  CARGA DEL CARRITO
-    // ============================================
-    const loadCart = useCallback(
-        async (skipLoading = false) => {
-            if (!isMountedRef.current) return
-            if (!skipLoading) setLoading(true)
-
-            try {
-                if (isAuthenticated()) {
-                    const response = await getCartService()
-                    const remoteItems = mapRemoteCart(response.cart?.products)
-                    setCart(remoteItems)
-                    return remoteItems
-                } else {
-                    const local = loadLocalCart()
-                    setCart(local)
-                    return local
-                }
-            } catch (error) {
-                console.error('Error cargando carrito:', error)
-                return []
-            } finally {
-                if (!skipLoading) setLoading(false)
-            }
-        },
-        [isAuthenticated, loadLocalCart, mapRemoteCart],
-    )
-
-    // ============================================
-    //  FUNCIÓN DE BROADCAST
-    // ============================================
+    // ===== BROADCAST CHANNEL =====
     const notifyOtherTabs = useCallback((type, additionalData = {}) => {
         if (broadcastChannelRef.current) {
             broadcastChannelRef.current.postMessage({
@@ -114,9 +87,33 @@ export const CartContextProvider = ({ children }) => {
         }
     }, [])
 
-    // ============================================
-    //  FUSIÓN POST-LOGIN
-    // ============================================
+    // ===== CARGA DEL CARRITO =====
+    const loadCart = useCallback(
+        async (skipLoading = false) => {
+            if (!isMountedRef.current) return
+            if (!skipLoading) setLoading(true)
+
+            try {
+                if (isAuthenticated()) {
+                    const response = await getCartService()
+                    const remoteItems = mapRemoteCart(response.cart?.products)
+                    setCart(remoteItems)
+                    return remoteItems
+                }
+                const local = loadLocalCart()
+                setCart(local)
+                return local
+            } catch (error) {
+                console.error('Error cargando carrito:', error)
+                return []
+            } finally {
+                if (!skipLoading) setLoading(false)
+            }
+        },
+        [isAuthenticated, loadLocalCart, mapRemoteCart],
+    )
+
+    // ===== FUSIÓN POST-LOGIN =====
     const syncCartAfterLogin = useCallback(async () => {
         const guestItems = loadLocalCart()
         setLoading(true)
@@ -135,35 +132,26 @@ export const CartContextProvider = ({ children }) => {
 
             if (webLocksAvailable) {
                 await navigator.locks.request('cart-merge-lock', async () => {
-                    // SOLO la ventana secundaria hace el merge
                     if (windowIdRef.current !== 0) {
                         const response = await mergeCartsService(guestItems)
                         if (response.adjustedProducts?.length > 0) {
-                            toast.error(
-                                'Algunos productos se ajustaron por falta de stock',
-                            )
+                            toast.error('Algunos productos se ajustaron por falta de stock')
                         }
-
                         localStorage.removeItem('cart')
-
                         if (response.cart?.products) {
                             setCart(mapRemoteCart(response.cart.products))
                             toast.success('¡Carrito sincronizado!')
                         }
-
                         notifyOtherTabs('RELOAD_CART')
                     }
                 })
             } else {
-                // fallback sin Web Locks
                 if (!window.mergeInProgress) {
                     window.mergeInProgress = true
                     const response = await mergeCartsService(guestItems)
 
                     if (response.adjustedProducts?.length > 0) {
-                        toast.error(
-                            'Algunos productos se ajustaron por falta de stock',
-                        )
+                        toast.error('Algunos productos se ajustaron por falta de stock')
                     }
 
                     localStorage.removeItem('cart')
@@ -179,13 +167,12 @@ export const CartContextProvider = ({ children }) => {
                         window.mergeInProgress = false
                     }, 5000)
                 } else {
-                    // solo recarga carrito si merge está en progreso
                     const currentCart = await getCartService()
                     setCart(mapRemoteCart(currentCart.cart?.products))
                 }
             }
         } catch (error) {
-            console.error(`❌ [${windowIdRef.current}] Error:`, error)
+            console.error(`Error en syncCartAfterLogin:`, error)
             toast.error('Error al sincronizar')
             await loadCart(true)
         } finally {
@@ -193,16 +180,13 @@ export const CartContextProvider = ({ children }) => {
         }
     }, [loadLocalCart, loadCart, mapRemoteCart, notifyOtherTabs])
 
-    // ============================================
-    //  BROADCAST CHANNEL
-    // ============================================
+    // ===== BROADCAST CHANNEL SETUP =====
     useEffect(() => {
         const channel = new BroadcastChannel('ecommerce_cart_sync')
         broadcastChannelRef.current = channel
+
         channel.onmessage = (event) => {
             const { type, payload } = event.data
-
-            // Ignorar mensajes propios
             if (payload?.sourceId === windowIdRef.current) return
 
             if (type === 'RELOAD_CART') {
@@ -210,7 +194,6 @@ export const CartContextProvider = ({ children }) => {
             } else if (type === 'LOGOUT') {
                 setCart([])
             } else if (type === 'MERGE_STARTED') {
-                // Guardar referencia para no hacer merge duplicado
                 window.mergeInProgress = true
                 setTimeout(() => {
                     window.mergeInProgress = false
@@ -224,9 +207,7 @@ export const CartContextProvider = ({ children }) => {
         }
     }, [loadCart])
 
-    // ============================================
-    //  EFECTO DE LOGIN
-    // ============================================
+    // ===== EFECTO DE LOGIN/LOGOUT =====
     useEffect(() => {
         if (userLoading) return
 
@@ -236,16 +217,13 @@ export const CartContextProvider = ({ children }) => {
         const handleAuthChange = async () => {
             try {
                 if (currentAuth && previousAuth === false) {
-                    // LOGIN - Web Locks maneja la concurrencia
                     await syncCartAfterLogin()
                 } else if (!currentAuth && previousAuth === true) {
-                    // LOGOUT
                     localStorage.removeItem('cart')
                     setCart([])
                     notifyOtherTabs('LOGOUT')
                     toast.success('Sesión cerrada')
                 } else if (!initialLoadDoneRef.current) {
-                    // CARGA INICIAL
                     if (currentAuth) {
                         await loadCart()
                     } else {
@@ -255,7 +233,7 @@ export const CartContextProvider = ({ children }) => {
                     initialLoadDoneRef.current = true
                 }
             } catch (error) {
-                console.error(`❌ [${windowIdRef.current}] Error:`, error)
+                console.error(`Error en handleAuthChange:`, error)
                 setLoading(false)
             } finally {
                 previousAuthState.current = currentAuth
@@ -272,9 +250,7 @@ export const CartContextProvider = ({ children }) => {
         notifyOtherTabs,
     ])
 
-    // ============================================
-    //  OPERACIONES
-    // ============================================
+    // ===== OPERACIONES DEL CARRITO =====
     const addToCart = async (product, quantity = 1) => {
         try {
             if (isAuthenticated()) {
@@ -287,9 +263,7 @@ export const CartContextProvider = ({ children }) => {
                 notifyOtherTabs('RELOAD_CART')
             } else {
                 const currentCart = loadLocalCart()
-                const existingItem = currentCart.find(
-                    (i) => i._id === product._id,
-                )
+                const existingItem = currentCart.find((i) => i._id === product._id)
                 const newQuantity = (existingItem?.quantity || 0) + quantity
                 if (newQuantity > product.stock) {
                     return toast.error(`Stock insuficiente`)
@@ -346,9 +320,7 @@ export const CartContextProvider = ({ children }) => {
                 }
                 notifyOtherTabs('RELOAD_CART')
             } else {
-                saveLocalCart(
-                    loadLocalCart().filter((i) => i._id !== productId),
-                )
+                saveLocalCart(loadLocalCart().filter((i) => i._id !== productId))
                 notifyOtherTabs('RELOAD_CART')
             }
             toast.success('Producto eliminado')
@@ -378,16 +350,9 @@ export const CartContextProvider = ({ children }) => {
         }
     }
 
-    // ============================================
-    // 📊 TOTALES
-    // ============================================
+    // ===== TOTALES =====
     const total = useMemo(
-        () =>
-            Number(
-                cart
-                    .reduce((acc, i) => acc + i.price * i.quantity, 0)
-                    .toFixed(2),
-            ),
+        () => Number(cart.reduce((acc, i) => acc + i.price * i.quantity, 0).toFixed(2)),
         [cart],
     )
 
@@ -396,6 +361,7 @@ export const CartContextProvider = ({ children }) => {
         [cart],
     )
 
+    // ===== CONTEXT VALUE =====
     const value = {
         cart,
         total,

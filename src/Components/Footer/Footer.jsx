@@ -1,147 +1,195 @@
+// src/Components/Footer/Footer.jsx
 import { Link } from 'react-router-dom'
-import { 
-    FiMail, 
-    FiPhone, 
-    FiMapPin, 
-    FiFacebook, 
-    FiTwitter, 
-    FiInstagram, 
+import {
+    FiMail,
+    FiPhone,
+    FiMapPin,
+    FiFacebook,
+    FiTwitter,
+    FiInstagram,
     FiGithub,
-    FiYoutube,
-    FiHeart
+    FiHeart,
+    FiSend,
+    FiTag,
+    FiPackage,
+    FiHome,
+    FiStar,
 } from 'react-icons/fi'
+import { useState } from 'react'
+import { useProduct } from '../../Hooks/useProduct'
 
 const Footer = () => {
     const currentYear = new Date().getFullYear()
+    const [email, setEmail] = useState('')
+    const [newsletterStatus, setNewsletterStatus] = useState(null)
+    const { categories } = useProduct()
+    const quickCategories = categories?.slice(0, 4) || []
+
+    const handleNewsletterSubmit = (e) => {
+        e.preventDefault()
+        if (!email) return
+
+        setNewsletterStatus('loading')
+        setTimeout(() => {
+            setNewsletterStatus('success')
+            setEmail('')
+            setTimeout(() => setNewsletterStatus(null), 3000)
+        }, 1000)
+    }
 
     return (
-        <footer className="bg-gradient-to-br from-gray-900 to-gray-800 text-white mt-auto">
-            {/* Curva decorativa superior */}
+        <footer className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 text-gray-800 dark:text-white mt-auto transition-colors duration-300">
+            {/* Línea decorativa superior */}
             <div className="h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500"></div>
-            
-            <div className="container mx-auto px-4 py-12">
-                {/* Grid principal */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
-                    
+
+            <div className="w-full px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 mb-8">
                     {/* Columna 1: Logo y descripción */}
                     <div className="space-y-4">
                         <div className="flex items-center gap-2">
-                            <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl flex items-center justify-center">
-                                <span className="text-white font-bold text-xl">E</span>
+                            <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg">
+                                <span className="text-white font-bold text-xl">
+                                    E
+                                </span>
                             </div>
-                            <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                            <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-purple-800 dark:from-purple-400 dark:to-purple-600 bg-clip-text text-transparent">
                                 E-Commerce
                             </h2>
                         </div>
-                        <p className="text-gray-300 text-sm leading-relaxed">
-                            Tu tienda online de confianza. Encuentra los mejores productos 
-                            con los precios más competitivos y la mejor calidad.
+                        <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
+                            Tu tienda online de confianza. Encuentra los mejores
+                            productos con los precios más competitivos y la
+                            mejor calidad.
                         </p>
-                        
-                        {/* Redes sociales */}
-                        <div className="flex gap-3 pt-4">
-                            <a 
-                                href="https://facebook.com" 
-                                target="_blank" 
+
+                        <div className="flex gap-2 pt-2">
+                            <a
+                                href="https://facebook.com"
+                                target="_blank"
                                 rel="noopener noreferrer"
-                                className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center hover:bg-purple-600 transition-all hover:scale-110"
-                                aria-label="Facebook"
+                                className="w-9 h-9 bg-gray-200 dark:bg-gray-700/50 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-purple-600 hover:text-white transition-all hover:scale-110"
                             >
-                                <FiFacebook className="w-5 h-5" />
+                                <FiFacebook className="w-4 h-4" />
                             </a>
-                            <a 
-                                href="https://twitter.com" 
-                                target="_blank" 
+                            <a
+                                href="https://twitter.com"
+                                target="_blank"
                                 rel="noopener noreferrer"
-                                className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center hover:bg-blue-400 transition-all hover:scale-110"
-                                aria-label="Twitter"
+                                className="w-9 h-9 bg-gray-200 dark:bg-gray-700/50 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-blue-400 hover:text-white transition-all hover:scale-110"
                             >
-                                <FiTwitter className="w-5 h-5" />
+                                <FiTwitter className="w-4 h-4" />
                             </a>
-                            <a 
-                                href="https://instagram.com" 
-                                target="_blank" 
+                            <a
+                                href="https://instagram.com"
+                                target="_blank"
                                 rel="noopener noreferrer"
-                                className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center hover:bg-pink-600 transition-all hover:scale-110"
-                                aria-label="Instagram"
+                                className="w-9 h-9 bg-gray-200 dark:bg-gray-700/50 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-pink-600 hover:text-white transition-all hover:scale-110"
                             >
-                                <FiInstagram className="w-5 h-5" />
+                                <FiInstagram className="w-4 h-4" />
                             </a>
-                            <a 
-                                href="https://github.com" 
-                                target="_blank" 
+                            <a
+                                href="https://github.com"
+                                target="_blank"
                                 rel="noopener noreferrer"
-                                className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center hover:bg-gray-600 transition-all hover:scale-110"
-                                aria-label="GitHub"
+                                className="w-9 h-9 bg-gray-200 dark:bg-gray-700/50 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-600 hover:text-white transition-all hover:scale-110"
                             >
-                                <FiGithub className="w-5 h-5" />
+                                <FiGithub className="w-4 h-4" />
                             </a>
                         </div>
                     </div>
 
-                    {/* Columna 2: Enlaces rápidos */}
+                    {/* Columna 2: Categorías */}
                     <div className="space-y-4">
-                        <h3 className="text-lg font-semibold text-white mb-4">Enlaces rápidos</h3>
+                        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-3 relative inline-block">
+                            <FiTag className="inline-block mr-2 w-4 h-4 text-purple-500 dark:text-purple-400" />
+                            Categorías
+                            <span className="absolute bottom-0 left-0 w-1/2 h-0.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></span>
+                        </h3>
                         <ul className="space-y-2">
                             <li>
-                                <Link to="/" className="text-gray-300 hover:text-purple-400 transition-colors flex items-center gap-2">
-                                    <span className="w-1 h-1 bg-purple-400 rounded-full"></span>
-                                    Inicio
+                                <Link
+                                    to="/"
+                                    className="text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-all flex items-center gap-2 group"
+                                >
+                                    <FiPackage className="w-3 h-3 group-hover:scale-110 transition-transform" />
+                                    <span>Todos los productos</span>
                                 </Link>
                             </li>
-                            <li>
-                                <Link to="/products" className="text-gray-300 hover:text-purple-400 transition-colors flex items-center gap-2">
-                                    <span className="w-1 h-1 bg-purple-400 rounded-full"></span>
-                                    Productos
-                                </Link>
-                            </li>
-                            <li>
-                                <Link to="/categories" className="text-gray-300 hover:text-purple-400 transition-colors flex items-center gap-2">
-                                    <span className="w-1 h-1 bg-purple-400 rounded-full"></span>
-                                    Categorías
-                                </Link>
-                            </li>
-                            <li>
-                                <Link to="/offers" className="text-gray-300 hover:text-purple-400 transition-colors flex items-center gap-2">
-                                    <span className="w-1 h-1 bg-purple-400 rounded-full"></span>
-                                    Ofertas
-                                </Link>
-                            </li>
-                            <li>
-                                <Link to="/faq" className="text-gray-300 hover:text-purple-400 transition-colors flex items-center gap-2">
-                                    <span className="w-1 h-1 bg-purple-400 rounded-full"></span>
-                                    Preguntas frecuentes
-                                </Link>
-                            </li>
+                            {quickCategories.map((cat) => (
+                                <li key={cat._id}>
+                                    <Link
+                                        to={`/?categoria=${encodeURIComponent(cat.name)}`}
+                                        onClick={() => {
+                                            if (window.filterByCategory) {
+                                                window.filterByCategory(
+                                                    cat.name,
+                                                    null,
+                                                )
+                                            }
+                                        }}
+                                        className="text-gray-300 hover:text-purple-400 transition-all flex items-center gap-2 group"
+                                    >
+                                        <span className="w-1.5 h-1.5 bg-purple-400 rounded-full group-hover:w-2 group-hover:bg-purple-300 transition-all"></span>
+                                        <span className="text-sm">
+                                            {cat.name}
+                                        </span>
+                                    </Link>
+                                </li>
+                            ))}
                         </ul>
                     </div>
 
-                    {/* Columna 3: Páginas legales */}
+                    {/* Columna 3: Información útil */}
                     <div className="space-y-4">
-                        <h3 className="text-lg font-semibold text-white mb-4">Información legal</h3>
+                        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-3 relative inline-block">
+                            <FiStar className="inline-block mr-2 w-4 h-4 text-purple-500 dark:text-purple-400" />
+                            Información útil
+                            <span className="absolute bottom-0 left-0 w-1/2 h-0.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></span>
+                        </h3>
                         <ul className="space-y-2">
                             <li>
-                                <Link to="/contact" className="text-gray-300 hover:text-purple-400 transition-colors flex items-center gap-2">
-                                    <span className="w-1 h-1 bg-purple-400 rounded-full"></span>
-                                    Contacto
+                                <Link
+                                    to="/"
+                                    className="text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-all flex items-center gap-2"
+                                >
+                                    <FiHome className="w-3 h-3" />
+                                    <span>Inicio</span>
                                 </Link>
                             </li>
                             <li>
-                                <Link to="/privacy" className="text-gray-300 hover:text-purple-400 transition-colors flex items-center gap-2">
-                                    <span className="w-1 h-1 bg-purple-400 rounded-full"></span>
-                                    Política de privacidad
+                                <Link
+                                    to="/contact"
+                                    className="text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-all flex items-center gap-2"
+                                >
+                                    <span className="w-1.5 h-1.5 bg-purple-500 dark:bg-purple-400 rounded-full"></span>
+                                    <span>Contacto</span>
                                 </Link>
                             </li>
                             <li>
-                                <Link to="/terms" className="text-gray-300 hover:text-purple-400 transition-colors flex items-center gap-2">
-                                    <span className="w-1 h-1 bg-purple-400 rounded-full"></span>
-                                    Términos y condiciones
+                                <Link
+                                    to="/faq"
+                                    className="text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-all flex items-center gap-2"
+                                >
+                                    <span className="w-1.5 h-1.5 bg-purple-500 dark:bg-purple-400 rounded-full"></span>
+                                    <span>Preguntas frecuentes</span>
                                 </Link>
                             </li>
                             <li>
-                                <Link to="/cookies" className="text-gray-300 hover:text-purple-400 transition-colors flex items-center gap-2">
-                                    <span className="w-1 h-1 bg-purple-400 rounded-full"></span>
-                                    Política de cookies
+                                <Link
+                                    to="/privacy"
+                                    className="text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-all flex items-center gap-2"
+                                >
+                                    <span className="w-1.5 h-1.5 bg-purple-500 dark:bg-purple-400 rounded-full"></span>
+                                    <span>Política de privacidad</span>
+                                </Link>
+                            </li>
+                            <li>
+                                <Link
+                                    to="/terms"
+                                    className="text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-all flex items-center gap-2"
+                                >
+                                    <span className="w-1.5 h-1.5 bg-purple-500 dark:bg-purple-400 rounded-full"></span>
+                                    <span>Términos y condiciones</span>
                                 </Link>
                             </li>
                         </ul>
@@ -149,56 +197,94 @@ const Footer = () => {
 
                     {/* Columna 4: Contacto y newsletter */}
                     <div className="space-y-4">
-                        <h3 className="text-lg font-semibold text-white mb-4">Contacto</h3>
+                        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-3 relative inline-block">
+                            Contacto
+                            <span className="absolute bottom-0 left-0 w-1/2 h-0.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></span>
+                        </h3>
                         <ul className="space-y-3">
-                            <li className="flex items-start gap-3 text-gray-300">
-                                <FiMail className="w-5 h-5 text-purple-400 flex-shrink-0 mt-1" />
-                                <span>soporte@ecommerce.com</span>
+                            <li className="flex items-start gap-3 text-gray-600 dark:text-gray-300 group">
+                                <FiMail className="w-5 h-5 text-purple-500 dark:text-purple-400 flex-shrink-0 mt-0.5" />
+                                <span className="text-sm break-all">
+                                    soporte@ecommerce.com
+                                </span>
                             </li>
-                            <li className="flex items-start gap-3 text-gray-300">
-                                <FiPhone className="w-5 h-5 text-purple-400 flex-shrink-0 mt-1" />
+                            <li className="flex items-start gap-3 text-gray-600 dark:text-gray-300">
+                                <FiPhone className="w-5 h-5 text-purple-500 dark:text-purple-400 flex-shrink-0 mt-0.5" />
                                 <span>+34 123 456 789</span>
                             </li>
-                            <li className="flex items-start gap-3 text-gray-300">
-                                <FiMapPin className="w-5 h-5 text-purple-400 flex-shrink-0 mt-1" />
+                            <li className="flex items-start gap-3 text-gray-600 dark:text-gray-300">
+                                <FiMapPin className="w-5 h-5 text-purple-500 dark:text-purple-400 flex-shrink-0 mt-0.5" />
                                 <span>Madrid, España</span>
                             </li>
                         </ul>
 
                         {/* Newsletter */}
-                        <div className="pt-4">
-                            <h4 className="text-sm font-medium text-gray-300 mb-2">Newsletter</h4>
-                            <div className="flex">
-                                <input 
-                                    type="email" 
+                        <div className="pt-2">
+                            <h4 className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">
+                                Newsletter
+                            </h4>
+                            <form
+                                onSubmit={handleNewsletterSubmit}
+                                className="flex"
+                            >
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
                                     placeholder="Tu email"
-                                    className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-l-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    className="flex-1 px-3 py-2 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-l-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm transition-colors"
+                                    required
                                 />
-                                <button className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-r-lg hover:from-purple-700 hover:to-purple-800 transition-colors">
-                                    Suscribir
+                                <button
+                                    type="submit"
+                                    disabled={newsletterStatus === 'loading'}
+                                    className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-r-lg hover:from-purple-700 hover:to-purple-800 transition-all disabled:opacity-50"
+                                >
+                                    {newsletterStatus === 'loading' ? (
+                                        <span className="loading loading-spinner loading-xs"></span>
+                                    ) : (
+                                        <FiSend className="w-4 h-4" />
+                                    )}
                                 </button>
-                            </div>
+                            </form>
+                            {newsletterStatus === 'success' && (
+                                <p className="text-xs text-green-500 dark:text-green-400 mt-2 animate-fadeIn">
+                                    ¡Gracias por suscribirte!
+                                </p>
+                            )}
                         </div>
                     </div>
                 </div>
 
-                {/* Barra inferior con copyright */}
-                <div className="border-t border-gray-700 pt-8 mt-8">
+                {/* Barra inferior */}
+                <div className="border-t border-gray-200 dark:border-gray-700/50 pt-6 mt-6">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                        <p className="text-gray-400 text-sm">
-                            © {currentYear} E-Commerce. Todos los derechos reservados.
+                        <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
+                            © {currentYear} E-Commerce. Todos los derechos
+                            reservados.
                         </p>
-                        <p className="text-gray-400 text-sm flex items-center gap-1">
-                            Hecho con <FiHeart className="text-red-500 animate-pulse" /> para nuestros clientes
+                        <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm flex items-center gap-1">
+                            Hecho con{' '}
+                            <FiHeart className="text-red-500 animate-pulse w-3 h-3 sm:w-4 sm:h-4" />{' '}
+                            para nuestros clientes
                         </p>
-                        <div className="flex gap-4 text-sm">
-                            <Link to="/privacy" className="text-gray-400 hover:text-purple-400 transition-colors">
+                        <div className="flex gap-4 text-xs sm:text-sm">
+                            <Link
+                                to="/privacy"
+                                className="text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+                            >
                                 Privacidad
                             </Link>
-                            <Link to="/terms" className="text-gray-400 hover:text-purple-400 transition-colors">
+                            <Link
+                                to="/terms"
+                                className="text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+                            >
                                 Términos
                             </Link>
-                            <Link to="/contact" className="text-gray-400 hover:text-purple-400 transition-colors">
+                            <Link
+                                to="/contact"
+                                className="text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+                            >
                                 Contacto
                             </Link>
                         </div>

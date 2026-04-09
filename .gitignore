@@ -1,3 +1,10 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+dist-ssr
+
 # Logs
 logs
 *.log
@@ -7,20 +14,48 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Environment variables (NUNCA subir)
+.env
+.env.local
+.env.development
+.env.production
+.env.staging
+.env*.local
 *.local
+
+# npm lockfile (project uses pnpm)
+package-lock.json
+yarn.lock
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+*.swp
+*.swo
 
-.env
+# OS generated files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Claude Code local settings
+.claude/
+
+# Repomix output (contains full codebase dump)
+repomix-output.xml
+
+# Coverage
+coverage
+
+# Certificates / keys
+*.pem
+*.key
+*.cert
+*.p12

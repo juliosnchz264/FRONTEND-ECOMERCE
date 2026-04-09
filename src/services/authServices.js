@@ -4,27 +4,18 @@ import api from './api'
 // 🟢 Evento personalizado para cambios en el token
 const TOKEN_EVENT = 'token-changed'
 
-// 🟢 Variable para almacenar el access token en memoria (NUNCA en localStorage)
-let accessToken = null
-
-// 🟢 Flag para evitar múltiples refrescos simultáneos
-let isRefreshing = false
-let refreshSubscribers = []
-
-// 🟢 Función para notificar a las peticiones en espera
-const onRefreshed = (newToken) => {
-    refreshSubscribers.forEach((callback) => callback(newToken))
-    refreshSubscribers = []
+// Access token stored on window so the api.js interceptor can read it without circular imports
+if (typeof window !== 'undefined' && !window.__accessToken) {
+    window.__accessToken = null;
 }
 
-// 🟢 Función para agregar peticiones a la cola de espera
-const addRefreshSubscriber = (callback) => {
-    refreshSubscribers.push(callback)
-}
+// Getter for backwards compatibility
+const getToken = () => window.__accessToken;
+const setToken = (t) => { window.__accessToken = t; }
 
-// 🟢 Helper para logging de respuestas (SOLO en desarrollo y no para check-session)
+// 🟢 Helper para logging de respuestas (SOLO en desarrollo)
 const logResponse = (method, url, response, isError = false) => {
-    // NO loguear check-session
+    if (!import.meta.env.DEV) return
     if (url.includes('check-session')) return
 
     const icon = isError ? '❌' : '✅'
@@ -33,9 +24,9 @@ const logResponse = (method, url, response, isError = false) => {
     console.log(`   Data:`, response.data)
 }
 
-// 🟢 Helper para logging de errores (SILENCIAR 401 de check-session)
+// 🟢 Helper para logging de errores (SOLO en desarrollo)
 const logError = (method, url, error) => {
-    // NO loguear errores 401 de check-session
+    if (!import.meta.env.DEV) return
     if (url.includes('check-session') && error.response?.status === 401) return
 
     console.error(`🔴 Error en ${method} ${url}`)
@@ -66,14 +57,10 @@ const dispatchTokenEvent = (token) => {
  * Establecer token manualmente y notificar cambios
  */
 export const setAccessToken = (token) => {
-    const oldToken = accessToken
+    const oldToken = getToken()
+    if (oldToken === token) return
 
-    // Si el token es el mismo, no notificar
-    if (oldToken === token) {
-        return // 👈 Eliminado console.log
-    }
-
-    accessToken = token
+    setToken(token)
     dispatchTokenEvent(token)
 }
 
@@ -81,15 +68,15 @@ export const setAccessToken = (token) => {
  * Obtener access token actual (para WebSocket)
  */
 export const getAccessToken = () => {
-    return accessToken
+    return getToken()
 }
 
 /**
  * Limpiar token (útil para logout)
  */
 export const clearAccessToken = () => {
-    if (accessToken) {
-        accessToken = null
+    if (getToken()) {
+        setToken(null)
         dispatchTokenEvent(null)
     }
 }
@@ -133,7 +120,9 @@ export const loginService = async (email, password) => {
  */
 export const registerService = async (userData) => {
     try {
-        const response = await api.post('/auth/register', userData)
+        // Strip confirmPassword — backend Zod schema may reject unknown fields
+        const { confirmPassword, ...payload } = userData
+        const response = await api.post('/auth/register', payload)
 
         if (response.status === 201) {
             return {
@@ -332,9 +321,14 @@ export const checkAuthStatus = async () => {
 // ============================================
 
 /**
- * Diagnosticar estado de autenticación
+ * Diagnosticar estado de autenticación (SOLO disponible en desarrollo)
  */
 export const diagnoseAuth = async () => {
+    if (!import.meta.env.DEV) {
+        console.warn('diagnoseAuth() solo está disponible en modo desarrollo.')
+        return
+    }
+
     console.log('\n========== 🏥 DIAGNÓSTICO DE AUTENTICACIÓN ==========')
 
     // 1. Verificar localStorage
@@ -348,13 +342,13 @@ export const diagnoseAuth = async () => {
         `   wasAuthenticated: ${localStorage.getItem('wasAuthenticated')}`,
     )
 
-    // 2. Verificar token en memoria
+    // 2. Verificar token en memoria (sin exponer preview del token)
+    const currentToken = getToken()
     console.log(
-        `\n🔐 Access Token en memoria: ${accessToken ? '✅ Presente' : '❌ No hay token'}`,
+        `\n🔐 Access Token en memoria: ${currentToken ? '✅ Presente' : '❌ No hay token'}`,
     )
-    if (accessToken) {
-        console.log(`   Longitud: ${accessToken.length} caracteres`)
-        console.log(`   Preview: ${accessToken.substring(0, 20)}...`)
+    if (currentToken) {
+        console.log(`   Longitud: ${currentToken.length} caracteres`)
     }
 
     // 3. Verificar cookies (solo las no HttpOnly)
@@ -362,8 +356,7 @@ export const diagnoseAuth = async () => {
 
     // 4. Verificar flags
     console.log('\n🚩 Flags:')
-    console.log(`   isRefreshing: ${isRefreshing}`)
-    console.log(`   refreshSubscribers: ${refreshSubscribers.length}`)
+    console.log(`   (refresh logic now in api.js interceptor)`)
 
     // 5. Verificar sesión en backend
     console.log('\n🌐 Verificando sesión en backend...')
@@ -382,17 +375,17 @@ export const diagnoseAuth = async () => {
     }
 
     console.log('\n📋 RECOMENDACIONES:')
-    if (userInfo && !accessToken) {
+    if (userInfo && !currentToken) {
         console.log(
             '   ⚠️ Hay userInfo pero no token en memoria - posible inconsistencia',
         )
         console.log('   ➡️ Ejecuta: forceLogout() y luego login nuevamente')
     }
-    if (!userInfo && accessToken) {
+    if (!userInfo && currentToken) {
         console.log('   ⚠️ Hay token pero no userInfo - posible inconsistencia')
         console.log('   ➡️ Ejecuta: clearAccessToken()')
     }
-    if (window.location.pathname === '/login' && accessToken) {
+    if (window.location.pathname === '/login' && currentToken) {
         console.log('   ⚠️ Estás en login pero hay token - redirigiendo...')
         console.log('   ➡️ Navega a / para usar el token existente')
     }
@@ -406,7 +399,4 @@ export const diagnoseAuth = async () => {
 
 export {
     TOKEN_EVENT,
-    accessToken, // Exportamos para debugging (solo lectura)
-    isRefreshing,
-    refreshSubscribers,
 }

@@ -150,3 +150,85 @@
     }
 }
 
+
+/* Agrega esto al final de tu index.css */
+
+/* Breakpoint extra pequeño (menos de 400px) */
+@media (min-width: 400px) {
+  .xs\:inline {
+    display: inline !important;
+  }
+  .xs\:hidden {
+    display: none !important;
+  }
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* ===================================== */
+/* OPTIMIZACIÓN PARA MODO OSCURO */
+/* ===================================== */
+
+/* Desactivar transiciones durante la carga inicial */
+*, *::before, *::after {
+    transition: none !important;
+}
+
+/* Reactivar transiciones después de que la página cargue */
+body.loaded,
+body.loaded *,
+body.loaded *::before,
+body.loaded *::after {
+    transition: background-color 0.2s ease-in-out, 
+                border-color 0.2s ease-in-out, 
+                color 0.2s ease-in-out,
+                fill 0.2s ease-in-out,
+                stroke 0.2s ease-in-out,
+                opacity 0.2s ease-in-out,
+                transform 0.2s ease-in-out !important;
+}
+
+/* Excepciones para elementos que no deben tener transición */
+img, 
+video, 
+iframe,
+.react-image-magnifiers__container *,
+.react-image-magnifiers__zoom,
+.react-image-magnifiers__lens,
+*:has(img) {
+    transition: none !important;
+}
+
+/* Fondo base para evitar flashes */
+html, body {
+    background-color: #ffffff;
+    transition: none !important;
+}
+
+html.dark, 
+html.dark body {
+    background-color: #111827;
+}
+
+/* Ocultar contenido inicialmente */
+#root {
+    opacity: 0;
+    transition: opacity 0.1s ease;
+}
+
+/* Mostrar contenido cuando la página está lista */
+body.loaded #root {
+    opacity: 1;
+}

@@ -1,8 +1,6 @@
 import React, { createContext, useState, useCallback } from 'react'
-import axios from 'axios'
+import api from '../services/api'
 import toast from 'react-hot-toast'
-
-const API_URL = import.meta.env.VITE_BACKEND_URL
 
 export const CategoryContext = createContext()
 
@@ -16,7 +14,7 @@ export const CategoryContextProvider = ({ children }) => {
     const getCategories = useCallback(async () => {
         try {
             setLoading(true)
-            const response = await axios.get(`${API_URL}/categories`)
+            const response = await api.get('/categories')
             setCategories(response.data)
             return response.data
         } catch (error) {
@@ -30,7 +28,7 @@ export const CategoryContextProvider = ({ children }) => {
 
     const getCategoryById = async (id) => {
         try {
-            const response = await axios.get(`${API_URL}/categories/${id}`)
+            const response = await api.get(`/categories/${id}`)
             return response.data
         } catch (error) {
             console.error('Error al obtener categoría:', error)
@@ -41,7 +39,7 @@ export const CategoryContextProvider = ({ children }) => {
 
     const createCategory = async (data) => {
         try {
-            const response = await axios.post(`${API_URL}/categories`, data)
+            const response = await api.post('/categories', data)
             toast.success('Categoría creada exitosamente')
             await getCategories()
             return { success: true, data: response.data }
@@ -54,7 +52,7 @@ export const CategoryContextProvider = ({ children }) => {
 
     const updateCategory = async (id, data) => {
         try {
-            const response = await axios.put(`${API_URL}/categories/${id}`, data)
+            const response = await api.put(`/categories/${id}`, data)
             toast.success('Categoría actualizada')
             await getCategories()
             return { success: true, data: response.data }
@@ -66,15 +64,38 @@ export const CategoryContextProvider = ({ children }) => {
     }
 
     const deleteCategory = async (id) => {
+        console.log('🗑️ Eliminando categoría con ID:', id) // 👈 Debug
+        
+        if (!id) {
+            console.error('❌ ID de categoría no válido:', id)
+            toast.error('ID de categoría no válido')
+            return { success: false, message: 'ID no válido' }
+        }
+        
         try {
-            await axios.delete(`${API_URL}/categories/${id}`)
-            toast.success('Categoría eliminada')
-            await getCategories()
-            return { success: true }
+            const response = await api.delete(`/categories/${id}`)
+            console.log('📥 Respuesta del servidor:', response.data) // 👈 Debug
+            
+            if (response.status === 200 || response.status === 204) {
+                toast.success(response.data?.message || 'Categoría eliminada correctamente')
+                
+                // Actualizar la lista de categorías después de eliminar
+                await getCategories()
+                
+                return { success: true, message: response.data?.message }
+            } else {
+                throw new Error('Respuesta inesperada del servidor')
+            }
         } catch (error) {
-            console.error('Error al eliminar categoría:', error)
-            toast.error(error.response?.data?.message || 'Error al eliminar')
-            return { success: false }
+            console.error('❌ Error al eliminar categoría:', error)
+            console.error('Detalles del error:', error.response?.data)
+            
+            const errorMessage = error.response?.data?.message || 
+                                error.response?.data?.error || 
+                                'Error al eliminar la categoría'
+            
+            toast.error(errorMessage)
+            return { success: false, message: errorMessage }
         }
     }
 
@@ -82,10 +103,10 @@ export const CategoryContextProvider = ({ children }) => {
     const getSubcategories = useCallback(async (categoryId = null) => {
         try {
             setLoading(true)
-            const url = categoryId 
-                ? `${API_URL}/subcategories/category/${categoryId}`
-                : `${API_URL}/subcategories`
-            const response = await axios.get(url)
+            const url = categoryId
+                ? `/subcategories/category/${categoryId}`
+                : `/subcategories`
+            const response = await api.get(url)
             setSubcategories(response.data)
             return response.data
         } catch (error) {
@@ -99,7 +120,7 @@ export const CategoryContextProvider = ({ children }) => {
 
     const getSubcategoryById = async (id) => {
         try {
-            const response = await axios.get(`${API_URL}/subcategories/${id}`)
+            const response = await api.get(`/subcategories/${id}`)
             return response.data
         } catch (error) {
             console.error('Error al obtener subcategoría:', error)
@@ -109,7 +130,7 @@ export const CategoryContextProvider = ({ children }) => {
 
     const createSubcategory = async (data) => {
         try {
-            const response = await axios.post(`${API_URL}/subcategories`, data)
+            const response = await api.post('/subcategories', data)
             toast.success('Subcategoría creada exitosamente')
             await getSubcategories(data.category)
             return { success: true, data: response.data }
@@ -122,7 +143,7 @@ export const CategoryContextProvider = ({ children }) => {
 
     const updateSubcategory = async (id, data) => {
         try {
-            const response = await axios.put(`${API_URL}/subcategories/${id}`, data)
+            const response = await api.put(`/subcategories/${id}`, data)
             toast.success('Subcategoría actualizada')
             await getSubcategories(data.category)
             return { success: true, data: response.data }
@@ -135,7 +156,7 @@ export const CategoryContextProvider = ({ children }) => {
 
     const deleteSubcategory = async (id, categoryId) => {
         try {
-            await axios.delete(`${API_URL}/subcategories/${id}`)
+            await api.delete(`/subcategories/${id}`)
             toast.success('Subcategoría eliminada')
             await getSubcategories(categoryId)
             return { success: true }

@@ -1,31 +1,28 @@
-// frontend/src/Context/UserContext.jsx
+// src/Context/UserContext.jsx
 import { useState, useEffect, createContext, useCallback, useRef } from 'react'
 import {
     getProfileService,
     logoutService,
     checkSessionService,
     setAccessToken,
-} from '../services/authServices' // 👈 importar setAccessToken
+} from '../services/authServices'
 import { useBroadcastAuth } from '../Hooks/useBroadcastAuth'
 import toast from 'react-hot-toast'
 
 export const UserContext = createContext(null)
 
 export const UserContextProvider = ({ children }) => {
+    // ===== ESTADO INICIAL =====
     const [userInfo, setUserInfo] = useState(() => {
         try {
             const saved = localStorage.getItem('userInfo')
-
-            // 🚨 VALIDACIÓN ROBUSTA
             if (!saved || saved === 'undefined' || saved === 'null') {
                 return null
             }
-
             const parsed = JSON.parse(saved)
             return parsed && typeof parsed === 'object' ? parsed : null
         } catch (error) {
-            console.error('❌ Error parsing userInfo from localStorage:', error)
-            // Limpiar el localStorage si hay datos corruptos
+            console.error('Error parsing userInfo from localStorage:', error)
             localStorage.removeItem('userInfo')
             return null
         }
@@ -34,9 +31,11 @@ export const UserContextProvider = ({ children }) => {
     const [loading, setLoading] = useState(true)
     const { notifyLogin, notifyLogout, onMessage } = useBroadcastAuth()
 
+    // ===== REFS =====
     const logoutRef = useRef(null)
     const checkSessionTimeoutRef = useRef(null)
 
+    // ===== FUNCIONES =====
     const logout = useCallback(
         async (shouldNotify = true) => {
             if (shouldNotify) {
@@ -84,23 +83,17 @@ export const UserContextProvider = ({ children }) => {
                     const newUserJSON = JSON.stringify(result.user)
 
                     if (currentUserJSON !== newUserJSON) {
-                        console.log('🔄 Actualizando información de usuario')
                         setUserInfo(result.user)
                         localStorage.setItem('userInfo', newUserJSON)
                         localStorage.setItem('wasAuthenticated', 'true')
-                    } else {
-                        console.log(
-                            '⏭️ Información de usuario idéntica, NO actualizando estado',
-                        )
                     }
                 } else {
-                    console.log('🚫 Sesión no válida')
                     setUserInfo(null)
                     localStorage.removeItem('userInfo')
                     localStorage.removeItem('wasAuthenticated')
                 }
             } catch (error) {
-                console.error('❌ Error en checkSession:', error)
+                console.error('Error en checkSession:', error)
             } finally {
                 setLoading(false)
                 checkSessionTimeoutRef.current = null
@@ -108,26 +101,21 @@ export const UserContextProvider = ({ children }) => {
         }, 300)
     }, [userInfo])
 
-
     const login = useCallback(
         async (userData, token) => {
-            console.log('👀 Estructura de userData:', userData)
             localStorage.setItem('wasAuthenticated', 'true')
             localStorage.setItem('userInfo', JSON.stringify(userData))
             setUserInfo(userData)
-            notifyLogin(userData, token) // 👈 pasar token
+            notifyLogin(userData, token)
             toast.success(`¡Bienvenido, ${userData.name || 'usuario'}!`)
         },
         [notifyLogin],
     )
 
-    // Escuchar mensajes de otras pestañas
+    // ===== BROADCAST MESSAGES =====
     useEffect(() => {
         onMessage((data) => {
-            console.log('📻 Broadcast - Mensaje recibido:', data)
-
             if (data.type === 'LOGOUT') {
-                console.log('🔒 Logout detectado en otra pestaña')
                 toast('Has cerrado sesión en otra ventana', {
                     duration: 3000,
                     position: 'top-center',
@@ -139,17 +127,13 @@ export const UserContextProvider = ({ children }) => {
             }
 
             if (data.type === 'LOGIN') {
-                console.log('🔓 Login detectado en otra pestaña')
-                console.log('   Usuario:', data.user)
-
                 if (data.user) {
                     setUserInfo(data.user)
                     localStorage.setItem('userInfo', JSON.stringify(data.user))
                     localStorage.setItem('wasAuthenticated', 'true')
 
-                    // 🟢 Si el token viene en el mensaje, guardarlo en memoria
                     if (data.token) {
-                        setAccessToken(data.token) // esto dispara token-changed
+                        setAccessToken(data.token)
                     }
 
                     toast.success(
@@ -161,7 +145,6 @@ export const UserContextProvider = ({ children }) => {
                         },
                     )
                 } else {
-                    // Fallback: si no hay datos completos, hacer checkSession
                     checkSession()
                 }
             }
@@ -174,7 +157,7 @@ export const UserContextProvider = ({ children }) => {
         }
     }, [onMessage, checkSession, logoutRef])
 
-    // Verificación inicial al cargar la pestaña
+    // ===== VERIFICACIÓN INICIAL =====
     useEffect(() => {
         const wasAuthenticated = localStorage.getItem('wasAuthenticated')
 
@@ -194,9 +177,11 @@ export const UserContextProvider = ({ children }) => {
         }
     }, [checkSession])
 
+    // ===== HELPERS =====
     const getUserId = useCallback(() => userInfo?.id || null, [userInfo])
     const isAuthenticated = useCallback(() => !!userInfo?.id, [userInfo])
 
+    // ===== CONTEXT VALUE =====
     const value = {
         userInfo,
         setUserInfo,

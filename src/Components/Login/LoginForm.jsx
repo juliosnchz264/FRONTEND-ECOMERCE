@@ -1,10 +1,12 @@
+// src/Components/Auth/LoginForm.jsx
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { FaEye, FaEyeSlash, FaEnvelope, FaLock } from 'react-icons/fa'
+import { FaEye, FaEyeSlash, FaEnvelope, FaLock, FaArrowRight } from 'react-icons/fa'
 import { useNavigate, useLocation } from 'react-router'
 import { loginService } from '../../services/authServices'
 import { useUser } from '../../Hooks/useUser.js'
 import toast from 'react-hot-toast'
+import { motion } from 'framer-motion'
 
 const LoginForm = () => {
     const {
@@ -30,7 +32,6 @@ const LoginForm = () => {
             const result = await loginService(data.email, data.password)
 
             if (result && result.success) {
-                // 🟢 Pasamos tanto el usuario como el token al contexto
                 login(result.user, result.accessToken)
                 toast.success(result.message || '¡Bienvenido!')
                 reset()
@@ -54,14 +55,14 @@ const LoginForm = () => {
     }
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             {/* EMAIL INPUT */}
             <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Correo electrónico
                 </label>
-                <div className="relative">
-                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                <div className="relative group">
+                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-purple-500 dark:group-focus-within:text-purple-400 transition-colors">
                         <FaEnvelope className="w-5 h-5" />
                     </div>
                     <input
@@ -72,38 +73,42 @@ const LoginForm = () => {
                                 message: 'Correo electrónico inválido',
                             },
                         })}
-                        className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all ${
+                        className={`w-full pl-12 pr-4 py-3.5 bg-white dark:bg-gray-900/50 border rounded-xl focus:outline-none focus:ring-2 transition-all text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 ${
                             errors.email
-                                ? 'border-red-300 focus:ring-red-200 focus:border-red-500'
-                                : 'border-gray-300 focus:ring-purple-200 focus:border-purple-500'
+                                ? 'border-red-300 dark:border-red-500 focus:ring-red-200 dark:focus:ring-red-500/20 focus:border-red-500'
+                                : 'border-gray-300 dark:border-gray-700 focus:ring-purple-200 dark:focus:ring-purple-500/20 focus:border-purple-500 dark:focus:border-purple-500 hover:border-gray-400 dark:hover:border-gray-600'
                         }`}
                         placeholder="tu@email.com"
                         type="email"
                     />
                 </div>
                 {errors.email && (
-                    <p className="text-red-500 text-sm flex items-center gap-1">
-                        <span className="inline-block w-1 h-1 bg-red-500 rounded-full"></span>
+                    <motion.p
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-red-500 dark:text-red-400 text-sm flex items-center gap-1 mt-1"
+                    >
+                        <span className="inline-block w-1 h-1 bg-red-500 dark:bg-red-400 rounded-full"></span>
                         {errors.email.message}
-                    </p>
+                    </motion.p>
                 )}
             </div>
 
             {/* PASSWORD INPUT */}
             <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Contraseña
                     </label>
                     <button
                         type="button"
-                        className="text-sm text-purple-600 hover:text-purple-700 hover:underline"
+                        className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 hover:underline transition-colors"
                     >
                         ¿Olvidaste tu contraseña?
                     </button>
                 </div>
-                <div className="relative">
-                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                <div className="relative group">
+                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-purple-500 dark:group-focus-within:text-purple-400 transition-colors">
                         <FaLock className="w-5 h-5" />
                     </div>
                     <input
@@ -114,10 +119,10 @@ const LoginForm = () => {
                                 message: 'Mínimo 6 caracteres',
                             },
                         })}
-                        className={`w-full pl-10 pr-12 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all ${
+                        className={`w-full pl-12 pr-12 py-3.5 bg-white dark:bg-gray-900/50 border rounded-xl focus:outline-none focus:ring-2 transition-all text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 ${
                             errors.password
-                                ? 'border-red-300 focus:ring-red-200 focus:border-red-500'
-                                : 'border-gray-300 focus:ring-purple-200 focus:border-purple-500'
+                                ? 'border-red-300 dark:border-red-500 focus:ring-red-200 dark:focus:ring-red-500/20 focus:border-red-500'
+                                : 'border-gray-300 dark:border-gray-700 focus:ring-purple-200 dark:focus:ring-purple-500/20 focus:border-purple-500 dark:focus:border-purple-500 hover:border-gray-400 dark:hover:border-gray-600'
                         }`}
                         placeholder="••••••••"
                         type={showPassword ? 'text' : 'password'}
@@ -125,7 +130,7 @@ const LoginForm = () => {
                     <button
                         onClick={() => setShowPassword((prev) => !prev)}
                         type="button"
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-purple-600 transition-colors"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
                     >
                         {showPassword ? (
                             <FaEyeSlash size={20} />
@@ -135,30 +140,39 @@ const LoginForm = () => {
                     </button>
                 </div>
                 {errors.password && (
-                    <p className="text-red-500 text-sm flex items-center gap-1">
-                        <span className="inline-block w-1 h-1 bg-red-500 rounded-full"></span>
+                    <motion.p
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-red-500 dark:text-red-400 text-sm flex items-center gap-1 mt-1"
+                    >
+                        <span className="inline-block w-1 h-1 bg-red-500 dark:bg-red-400 rounded-full"></span>
                         {errors.password.message}
-                    </p>
+                    </motion.p>
                 )}
             </div>
 
             {/* Botón de submit */}
-            <button
+            <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 disabled={isSubmitting}
-                className={`w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-semibold rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all transform hover:-translate-y-0.5 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 ${
+                className={`w-full py-3.5 px-4 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-semibold rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all shadow-lg hover:shadow-purple-500/25 flex items-center justify-center gap-2 group ${
                     isSubmitting ? 'opacity-75 cursor-not-allowed' : ''
                 }`}
                 type="submit"
             >
                 {isSubmitting ? (
                     <>
-                        <span className="loading loading-spinner loading-sm"></span>
-                        Iniciando sesión...
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Iniciando sesión...</span>
                     </>
                 ) : (
-                    'Iniciar sesión'
+                    <>
+                        <span>Iniciar sesión</span>
+                        <FaArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </>
                 )}
-            </button>
+            </motion.button>
         </form>
     )
 }
