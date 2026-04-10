@@ -136,22 +136,51 @@ export const ProductContextProvider = ({ children }) => {
         getSubcategoryIdFromName,
     ])
 
-    // 👉 EFECTO: Sincronizar URL con estado
+    // 👉 EFECTO: Sincronizar URL con estado (con validación de params)
     useEffect(() => {
         if (isUpdatingFromUrlRef.current) return
 
-        const urlCategory = searchParams.get('categoria') || 'Todos'
-        let urlSubcategory = searchParams.get('subcategoria') || null
+        const rawCategory = searchParams.get('categoria') || 'Todos'
+        let rawSubcategory = searchParams.get('subcategoria') || null
         const parsedPage = parseInt(searchParams.get('page'))
         const urlPage = Number.isFinite(parsedPage) && parsedPage >= 1 ? parsedPage : 1
 
-        // Convertir ID a nombre si es necesario
-        if (urlSubcategory && /^[0-9a-fA-F]{24}$/.test(urlSubcategory)) {
-            const name = getSubcategoryNameFromId(urlSubcategory)
-            if (name) urlSubcategory = name
+        // Convertir ID de subcategoría a nombre si es necesario
+        if (rawSubcategory && /^[0-9a-fA-F]{24}$/.test(rawSubcategory)) {
+            const name = getSubcategoryNameFromId(rawSubcategory)
+            if (name) rawSubcategory = name
         }
 
+        // Validar categoria contra la whitelist de categorías cargadas.
+        // Si aún no cargaron (categories vacío), dejar pasar para no bloquear el fetch inicial.
+        const urlCategory =
+            categories.length === 0 || rawCategory === 'Todos'
+                ? rawCategory
+                : categories.some((c) => c.name === rawCategory)
+                    ? rawCategory
+                    : 'Todos'
+
+        // Validar subcategoría contra la whitelist de subcategorías cargadas.
+        const urlSubcategory =
+            rawSubcategory === null ||
+            subcategories.length === 0 ||
+            subcategories.some((s) => s.name === rawSubcategory)
+                ? rawSubcategory
+                : null
+
+        // Si algún param era inválido, limpiar la URL para no dejar basura
+        const categoryWasInvalid = urlCategory !== rawCategory
+        const subcategoryWasInvalid = urlSubcategory !== rawSubcategory
+
         isUpdatingFromUrlRef.current = true
+
+        if (categoryWasInvalid || subcategoryWasInvalid) {
+            const cleanParams = new URLSearchParams()
+            if (urlCategory !== 'Todos') cleanParams.set('categoria', urlCategory)
+            if (urlSubcategory) cleanParams.set('subcategoria', urlSubcategory)
+            if (urlPage > 1) cleanParams.set('page', urlPage.toString())
+            setSearchParams(cleanParams, { replace: true })
+        }
 
         let needsUpdate = false
 
@@ -173,11 +202,11 @@ export const ProductContextProvider = ({ children }) => {
         if (needsUpdate) {
             // URL synced with state
         }
-        
+
         setTimeout(() => {
             isUpdatingFromUrlRef.current = false
         }, 100)
-    }, [searchParams, selectedCategory, selectedSubcategory, currentPage, getSubcategoryNameFromId])
+    }, [searchParams, selectedCategory, selectedSubcategory, currentPage, categories, subcategories, getSubcategoryNameFromId, setSearchParams])
 
     // 👉 EFECTO: Cargar productos cuando cambian los parámetros
     useEffect(() => {

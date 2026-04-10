@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { FiSearch, FiX } from 'react-icons/fi'
 
-const SearchBar = ({ value = '', onSearch, onQueryChange, className = '' }) => {
+const SearchBar = ({ value = '', onSearch, onQueryChange, className = '', showSearchIcon = true }) => {
     // Si el padre pasa value, usamos eso; si no, estado local
     const isControlled = value !== undefined && onQueryChange
     const [localQuery, setLocalQuery] = useState('')
@@ -217,10 +217,10 @@ const SearchBar = ({ value = '', onSearch, onQueryChange, className = '' }) => {
                     }}
                     onKeyDown={handleKeyDown}
                     placeholder="Buscar productos..."
-                    className="w-full px-4 py-3 pl-12 pr-12 bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent shadow-lg transition-shadow"
+                    className={`w-full px-4 py-3 ${showSearchIcon ? 'pl-12' : 'pl-4'} pr-12 bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent shadow-lg transition-shadow`}
                     autoComplete="off"
                 />
-                <FiSearch className="absolute left-4 top-3.5 w-5 h-5 text-gray-400 pointer-events-none" />
+                {showSearchIcon && <FiSearch className="absolute left-4 top-3.5 w-5 h-5 text-gray-400 pointer-events-none" />}
 
                 {query && (
                     <button

@@ -13,6 +13,7 @@ import { CategoryContextProvider } from './Context/CategoryContext'
 import { CartContextProvider } from './Context/CartContext'
 import { WishlistProvider } from './Context/WishlistContext'
 import { ThemeProvider } from './Context/ThemeContext'
+import { SearchProvider } from './Context/SearchContext'
 import { DashboardProductProvider } from './Context/DashboardProductContext'
 import { Toaster } from 'react-hot-toast'
 import DetailProduct from './Pages/DetailProduct'
@@ -40,134 +41,136 @@ function App() {
                     <CartContextProvider>
                         <WishlistProvider>
                             <ThemeProvider>
-                                <Routes>
-                                    <Route element={<Layout />}>
-                                        {/* RUTAS PÚBLICAS */}
-                                        <Route path="/" element={<Home />} />
-                                        <Route
-                                            path="/detailProduct/:id"
-                                            element={<DetailProduct />}
-                                        />
-                                        <Route path="/contact" element={<Contact />} />
-                                        <Route path="/privacy" element={<Privacy />} />
-                                        <Route path="/terms" element={<Terms />} />
-                                        <Route path="/faq" element={<Faq />} />
+                                <SearchProvider>
+                                    <Routes>
+                                        <Route element={<Layout />}>
+                                            {/* RUTAS PÚBLICAS */}
+                                            <Route path="/" element={<Home />} />
+                                            <Route
+                                                path="/detailProduct/:id"
+                                                element={<DetailProduct />}
+                                            />
+                                            <Route path="/contact" element={<Contact />} />
+                                            <Route path="/privacy" element={<Privacy />} />
+                                            <Route path="/terms" element={<Terms />} />
+                                            <Route path="/faq" element={<Faq />} />
 
-                                        {/* 👉 RUTA DE WISHLIST - PROTEGIDA */}
+                                            {/* 👉 RUTA DE WISHLIST - PROTEGIDA */}
+                                            <Route
+                                                path="/wishlist"
+                                                element={
+                                                    <ProtectedRoute>
+                                                        <Wishlist />
+                                                    </ProtectedRoute>
+                                                }
+                                            />
+
+                                            {/* RUTAS DE INVITADOS */}
+                                            <Route
+                                                path="/login"
+                                                element={
+                                                    <GuestRoute>
+                                                        <Login />
+                                                    </GuestRoute>
+                                                }
+                                            />
+                                            <Route
+                                                path="/register"
+                                                element={
+                                                    <GuestRoute>
+                                                        <Register />
+                                                    </GuestRoute>
+                                                }
+                                            />
+
+                                            {/* RUTAS PROTEGIDAS */}
+                                            <Route
+                                                path="/checkout"
+                                                element={
+                                                    <ProtectedRoute>
+                                                        <Checkout />
+                                                    </ProtectedRoute>
+                                                }
+                                            />
+                                            <Route
+                                                path="/orders"
+                                                element={
+                                                    <ProtectedRoute>
+                                                        <OrdersPage />
+                                                    </ProtectedRoute>
+                                                }
+                                            />
+                                            <Route
+                                                path="/profile"
+                                                element={
+                                                    <ProtectedRoute>
+                                                        <Profile />
+                                                    </ProtectedRoute>
+                                                }
+                                            />
+                                            <Route
+                                                path="/profile/settings"
+                                                element={
+                                                    <ProtectedRoute>
+                                                        <Settings />
+                                                    </ProtectedRoute>
+                                                }
+                                            />
+
+                                            {/* RESULTADOS DE PAGO */}
+                                            <Route
+                                                path="/payment/success"
+                                                element={
+                                                    <ProtectedRoute>
+                                                        <PaymentSuccess />
+                                                    </ProtectedRoute>
+                                                }
+                                            />
+                                            <Route
+                                                path="/payment/failure"
+                                                element={
+                                                    <ProtectedRoute>
+                                                        <PaymentFailure />
+                                                    </ProtectedRoute>
+                                                }
+                                            />
+                                            <Route
+                                                path="/payment/pending"
+                                                element={
+                                                    <ProtectedRoute>
+                                                        <PaymentPending />
+                                                    </ProtectedRoute>
+                                                }
+                                            />
+                                        </Route>
+
+                                        {/* 🚨 ADMINISTRACIÓN - FUERA DEL LAYOUT PRINCIPAL (sin footer) */}
                                         <Route
-                                            path="/wishlist"
+                                            path="/admin/dashboard/*"
                                             element={
-                                                <ProtectedRoute>
-                                                    <Wishlist />
-                                                </ProtectedRoute>
+                                                <AdminRoute>
+                                                    <DashboardProductProvider>
+                                                        <AdminDashboard />
+                                                    </DashboardProductProvider>
+                                                </AdminRoute>
                                             }
                                         />
 
-                                        {/* RUTAS DE INVITADOS */}
+                                        {/* 👇 RUTAS DE VERIFICACIÓN DE EMAIL - FUERA DEL LAYOUT PRINCIPAL */}
                                         <Route
-                                            path="/login"
-                                            element={
-                                                <GuestRoute>
-                                                    <Login />
-                                                </GuestRoute>
-                                            }
+                                            path="/verify-email"
+                                            element={<VerifyEmail />}
                                         />
                                         <Route
-                                            path="/register"
-                                            element={
-                                                <GuestRoute>
-                                                    <Register />
-                                                </GuestRoute>
-                                            }
+                                            path="/verify-email-pending"
+                                            element={<VerifyEmailPending />}
                                         />
 
-                                        {/* RUTAS PROTEGIDAS */}
-                                        <Route
-                                            path="/checkout"
-                                            element={
-                                                <ProtectedRoute>
-                                                    <Checkout />
-                                                </ProtectedRoute>
-                                            }
-                                        />
-                                        <Route
-                                            path="/orders"
-                                            element={
-                                                <ProtectedRoute>
-                                                    <OrdersPage />
-                                                </ProtectedRoute>
-                                            }
-                                        />
-                                        <Route
-                                            path="/profile"
-                                            element={
-                                                <ProtectedRoute>
-                                                    <Profile />
-                                                </ProtectedRoute>
-                                            }
-                                        />
-                                        <Route
-                                            path="/profile/settings"
-                                            element={
-                                                <ProtectedRoute>
-                                                    <Settings />
-                                                </ProtectedRoute>
-                                            }
-                                        />
-
-                                        {/* RESULTADOS DE PAGO */}
-                                        <Route
-                                            path="/payment/success"
-                                            element={
-                                                <ProtectedRoute>
-                                                    <PaymentSuccess />
-                                                </ProtectedRoute>
-                                            }
-                                        />
-                                        <Route
-                                            path="/payment/failure"
-                                            element={
-                                                <ProtectedRoute>
-                                                    <PaymentFailure />
-                                                </ProtectedRoute>
-                                            }
-                                        />
-                                        <Route
-                                            path="/payment/pending"
-                                            element={
-                                                <ProtectedRoute>
-                                                    <PaymentPending />
-                                                </ProtectedRoute>
-                                            }
-                                        />
-                                    </Route>
-
-                                    {/* 🚨 ADMINISTRACIÓN - FUERA DEL LAYOUT PRINCIPAL (sin footer) */}
-                                    <Route
-                                        path="/admin/dashboard/*"
-                                        element={
-                                            <AdminRoute>
-                                                <DashboardProductProvider>
-                                                    <AdminDashboard />
-                                                </DashboardProductProvider>
-                                            </AdminRoute>
-                                        }
-                                    />
-
-                                    {/* 👇 RUTAS DE VERIFICACIÓN DE EMAIL - FUERA DEL LAYOUT PRINCIPAL */}
-                                    <Route
-                                        path="/verify-email"
-                                        element={<VerifyEmail />}
-                                    />
-                                    <Route
-                                        path="/verify-email-pending"
-                                        element={<VerifyEmailPending />}
-                                    />
-
-                                    {/* 👇 RUTAS DE ERROR - FUERA DEL LAYOUT PRINCIPAL */}
-                                    <Route path="/500" element={<ServerError />} />
-                                    <Route path="*" element={<NotFound />} />
-                                </Routes>
+                                        {/* 👇 RUTAS DE ERROR - FUERA DEL LAYOUT PRINCIPAL */}
+                                        <Route path="/500" element={<ServerError />} />
+                                        <Route path="*" element={<NotFound />} />
+                                    </Routes>
+                                </SearchProvider>
                             </ThemeProvider>
                         </WishlistProvider>
                     </CartContextProvider>

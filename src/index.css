@@ -232,3 +232,119 @@ html.dark body {
 body.loaded #root {
     opacity: 1;
 }
+
+/* Agrega esto al final de tu index.css */
+
+/* ===================================== */
+/* ANIMACIONES PARA EL CARRUSEL */
+/* ===================================== */
+
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Clases de animación */
+.animate-fade-in {
+  animation: fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Retrasos para efectos secuenciales */
+.delay-100 {
+  animation-delay: 100ms;
+}
+
+.delay-200 {
+  animation-delay: 200ms;
+}
+
+.delay-300 {
+  animation-delay: 300ms;
+}
+
+.delay-400 {
+  animation-delay: 400ms;
+}
+
+.delay-500 {
+  animation-delay: 500ms;
+}
+
+/* ===================================== */
+/* TRANSICIONES DEL CARRUSEL */
+/* ===================================== */
+
+.carousel-transition {
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Indicadores del carrusel */
+.carousel-dot {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.carousel-dot-active {
+  width: 2rem;
+  background-color: white;
+}
+
+.carousel-dot-inactive {
+  width: 0.5rem;
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+.carousel-dot-inactive:hover {
+  background-color: rgba(255, 255, 255, 0.75);
+  transform: scale(1.2);
+}
+
+/* ===================================== */
+/* EFECTOS DE HOVER PARA BOTONES */
+/* ===================================== */
+
+.hover-scale {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-scale:hover {
+  transform: scale(1.1);
+}
+
+.hover-scale:active {
+  transform: scale(0.95);
+}
+
