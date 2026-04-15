@@ -6,13 +6,14 @@ import { FiPackage, FiMapPin, FiCreditCard, FiMail, FiCheck, FiPrinter } from 'r
 import { toast } from 'react-hot-toast'
 import { useCart } from '../Hooks/useCart.js'
 import { getOrderBySession } from '../services/orderServices'
+import { formatPrice } from '../utils/formatPrice.js'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { motion } from 'framer-motion'
 
 const PaymentSuccess = () => {
     const [searchParams] = useSearchParams()
-    const { setCart } = useCart()
+    const { loadCart } = useCart()
     const [order, setOrder] = useState(null)
     const [loading, setLoading] = useState(true)
     
@@ -70,8 +71,8 @@ const PaymentSuccess = () => {
             const tableRows = order.products.map(item => [
                 item.name,
                 item.quantity.toString(),
-                `$${item.price.toLocaleString()}`,
-                `$${(item.price * item.quantity).toLocaleString()}`
+                `${formatPrice(item.price)}`,
+                `${formatPrice(item.price * item.quantity)}`
             ]);
 
             autoTable(doc, {
@@ -127,9 +128,9 @@ const PaymentSuccess = () => {
 
                 if (data.success) {
                     setOrder(data.order)
-                    setCart([])
                     localStorage.removeItem('cart')
                     sessionStorage.removeItem('checkoutCart')
+                    await loadCart()
                     toast.success('¡Pago verificado!')
                 }
             } catch (error) {
@@ -140,7 +141,7 @@ const PaymentSuccess = () => {
         }
 
         if (sessionId) fetchDetails()
-    }, [sessionId, setCart])
+    }, [sessionId, loadCart])
 
     if (loading) {
         return (
@@ -217,7 +218,7 @@ const PaymentSuccess = () => {
                                                     {item.quantity}x {item.name}
                                                 </span>
                                                 <span className="font-mono font-bold text-purple-600 dark:text-purple-400">
-                                                    ${(item.price * item.quantity).toLocaleString()}
+                                                    {formatPrice(item.price * item.quantity)}
                                                 </span>
                                             </div>
                                         ))}

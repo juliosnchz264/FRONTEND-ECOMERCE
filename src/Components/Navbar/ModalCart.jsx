@@ -8,6 +8,7 @@ import { FiX, FiAlertTriangle, FiImage, FiChevronRight, FiGift } from 'react-ico
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import Portal from '../ui/Portal'
 import { PLACEHOLDER_IMAGE } from '../../utils/imageUtils'
+import { formatPrice } from '../../utils/formatPrice.js'
 
 // Componente de Confirmación Mejorado con modo oscuro
 const ConfirmModal = ({ isOpen, onClose, onConfirm, loading }) => {
@@ -123,7 +124,7 @@ const CartItem = ({ item, isLoading, localLoading, onUpdateQuantity, onRemove })
                         </h4>
                         <div className="flex items-center gap-2 mt-1">
                             <span className="text-lg font-bold text-purple-600 dark:text-purple-400">
-                                ${item.price}
+                                {formatPrice(item.price)}
                             </span>
                             {item.originalPrice && (
                                 <span className="text-sm text-gray-400 dark:text-gray-500 line-through">
@@ -134,7 +135,7 @@ const CartItem = ({ item, isLoading, localLoading, onUpdateQuantity, onRemove })
                         </div>
                     </div>
                     <span className="font-bold text-xl text-purple-700 dark:text-purple-400 whitespace-nowrap">
-                        ${(item.price * item.quantity).toFixed(2)}
+                        {formatPrice(item.price * item.quantity)}
                     </span>
                 </div>
 

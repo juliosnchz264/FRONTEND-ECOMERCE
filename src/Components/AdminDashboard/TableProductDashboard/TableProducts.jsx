@@ -5,6 +5,7 @@ import { useDashboardProduct } from '../../../Hooks/useDashboardProduct.js'
 import toast from 'react-hot-toast'
 import { motion } from 'framer-motion'
 import { PLACEHOLDER_IMAGE } from '../../../utils/imageUtils'
+import { formatPrice } from '../../../utils/formatPrice.js'
 
 const TableProducts = ({ products }) => {
     const { deleteProduct, categories } = useDashboardProduct()
@@ -141,7 +142,7 @@ const TableProducts = ({ products }) => {
                                 </td>
                                 <td className="px-4 py-4">
                                     <span className="font-bold text-purple-600 dark:text-purple-400 text-sm">
-                                        ${product.price?.toFixed(2)}
+                                        {formatPrice(product.price)}
                                     </span>
                                 </td>
                                 <td className="px-4 py-4">

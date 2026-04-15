@@ -22,6 +22,7 @@ import Modal from 'react-modal'
 import { motion } from 'framer-motion'
 import { useSanitize } from '../Hooks/useSanitize.js'
 import { getOptimizedImage, PLACEHOLDER_IMAGE } from '../utils/imageUtils.js'
+import { formatPrice } from '../utils/formatPrice.js'
 import { useWishlist } from '../Hooks/useWishlist'
 import toast from 'react-hot-toast'
 
@@ -453,7 +454,7 @@ const DetailProduct = () => {
                             <div className="flex items-center gap-4 flex-wrap">
                                 <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-3 rounded-2xl">
                                     <span className="text-3xl font-bold">
-                                        ${product.price?.toFixed(2)}
+                                        {formatPrice(product.price)}
                                     </span>
                                 </div>
                                 <div
@@ -559,7 +560,7 @@ const DetailProduct = () => {
                                         </span>
                                     </div>
                                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                                        En compras mayores a $50
+                                        En compras mayores a 40€
                                     </p>
                                 </div>
                                 <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 border border-purple-100 dark:border-purple-800">

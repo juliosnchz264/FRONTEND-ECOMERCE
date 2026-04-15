@@ -52,7 +52,7 @@ const Terms = () => {
             list: [
                 "Envío estándar: 3-7 días hábiles",
                 "Envío express: 1-2 días hábiles (disponible en zonas seleccionadas)",
-                "Envío gratis en compras mayores a $50",
+                "Envío gratis en compras mayores a 40€",
                 "Seguimiento en tiempo real de tu pedido",
                 "Notificaciones por email y SMS del estado de tu envío"
             ],

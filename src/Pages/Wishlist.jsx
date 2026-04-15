@@ -7,6 +7,7 @@ import { FiHeart, FiShoppingCart, FiTrash2, FiArrowLeft } from 'react-icons/fi'
 import { FaHeart } from 'react-icons/fa'
 import toast from 'react-hot-toast'
 import { PLACEHOLDER_IMAGE } from '../utils/imageUtils'
+import { formatPrice } from '../utils/formatPrice.js'
 
 const Wishlist = () => {
     const { wishlist, removeFromWishlist, totalWishlistItems } = useWishlist()
@@ -123,7 +124,7 @@ const Wishlist = () => {
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <span className="text-xl font-bold text-purple-600 dark:text-purple-400">
-                                            ${product.price?.toFixed(2)}
+                                            {formatPrice(product.price)}
                                         </span>
                                         {product.stock > 0 && (
                                             <span className="text-xs text-gray-400 dark:text-gray-500 ml-2">

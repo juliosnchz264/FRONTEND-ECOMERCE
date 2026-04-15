@@ -16,6 +16,7 @@ import { useSanitize } from '../../Hooks/useSanitize.js'
 import { useWishlist } from '../../Hooks/useWishlist'
 import { useUser } from '../../Hooks/useUser' // 👈 Agregar useUser
 import { getOptimizedImage } from '../../utils/imageUtils.js'
+import { formatPrice } from '../../utils/formatPrice.js'
 import toast from 'react-hot-toast'
 
 // Usar memo para evitar re-renderizados innecesarios
@@ -278,7 +279,7 @@ const CardProduct = memo(({ product }) => {
                 )}
 
                 {/* Badge de envío gratis */}
-                {price > 50 && !isOutOfStock && (
+                {price > 40 && !isOutOfStock && (
                     <div className="absolute bottom-2 left-2 z-10 badge bg-info/90 dark:bg-info/80 text-white gap-1 py-2 sm:py-3 shadow-lg text-[10px] sm:text-xs border-none">
                         <BsTruck className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" />
                         <span className="hidden xs:inline">
@@ -325,7 +326,7 @@ const CardProduct = memo(({ product }) => {
                                         : 'text-gray-900 dark:text-white'
                                 } leading-tight`}
                             >
-                                ${price?.toLocaleString()}
+                                {formatPrice(price)}
                             </span>
                             {!isOutOfStock && (
                                 <span className="text-[8px] sm:text-xs text-gray-400 dark:text-gray-500 block">

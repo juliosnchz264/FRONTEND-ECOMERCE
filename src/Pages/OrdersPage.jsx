@@ -17,6 +17,7 @@ import {
 } from 'react-icons/fa'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
+import { formatPrice } from '../utils/formatPrice.js'
 import { Link } from 'react-router'
 
 const OrdersPage = () => {
@@ -267,7 +268,7 @@ const OrdersPage = () => {
                                                                 {item.name || item.productId?.name || 'Producto'}
                                                             </span>
                                                             <span className="font-mono font-bold text-purple-600 dark:text-purple-400">
-                                                                ${((item.price || item.precio || 0) * (item.quantity || item.cantidad || 1)).toLocaleString()}
+                                                                {formatPrice((item.price || item.precio || 0) * (item.quantity || item.cantidad || 1))}
                                                             </span>
                                                         </li>
                                                     ))}

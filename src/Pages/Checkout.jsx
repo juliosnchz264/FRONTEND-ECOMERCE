@@ -6,6 +6,7 @@ import { useUser } from '../Hooks/useUser.js'
 import { createOrder } from '../services/orderServices'
 import { useNavigate } from 'react-router'
 import toast from 'react-hot-toast'
+import { formatPrice } from '../utils/formatPrice.js'
 import { 
     FiUser, 
     FiMail, 
@@ -404,7 +405,7 @@ const Checkout = () => {
                                                         Cantidad: {item.quantity}
                                                     </span>
                                                     <span className="font-bold text-purple-600 dark:text-purple-400">
-                                                        ${(item.price * item.quantity).toFixed(2)}
+                                                        {formatPrice(item.price * item.quantity)}
                                                     </span>
                                                 </div>
                                             </div>
@@ -418,19 +419,19 @@ const Checkout = () => {
                                 <div className="space-y-3">
                                     <div className="flex justify-between items-center text-sm">
                                         <span className="text-gray-600 dark:text-gray-400">Subtotal</span>
-                                        <span className="font-semibold text-gray-800 dark:text-white">${total.toFixed(2)}</span>
+                                        <span className="font-semibold text-gray-800 dark:text-white">{formatPrice(total)}</span>
                                     </div>
                                     <div className="flex justify-between items-center text-sm">
                                         <span className="text-gray-600 dark:text-gray-400">Envío</span>
                                         <span className="font-semibold text-green-600 dark:text-green-400">
-                                            {total >= 50 ? 'Gratis' : 'Por calcular'}
+                                            {total >= 40 ? 'Gratis' : 'Por calcular'}
                                         </span>
                                     </div>
                                     <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
                                         <div className="flex justify-between items-center">
                                             <span className="text-lg font-bold text-gray-800 dark:text-white">Total</span>
                                             <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                                                ${total.toFixed(2)}
+                                                {formatPrice(total)}
                                             </span>
                                         </div>
                                     </div>

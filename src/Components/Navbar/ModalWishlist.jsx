@@ -7,6 +7,7 @@ import { FiX, FiHeart, FiShoppingCart, FiTrash2, FiLogIn } from 'react-icons/fi'
 import { FaHeart } from 'react-icons/fa'
 import { useCart } from '../../Hooks/useCart'
 import toast from 'react-hot-toast'
+import { formatPrice } from '../../utils/formatPrice.js'
 import AuthToast from '../ui/AuthToast' // 👈 Importar AuthToast
 import { PLACEHOLDER_IMAGE } from '../../utils/imageUtils'
 
@@ -187,7 +188,7 @@ const ModalWishlist = () => {
                                                 </Link>
                                                 <div className="flex items-center gap-2 mt-1">
                                                     <span className="text-lg font-bold text-purple-600 dark:text-purple-400">
-                                                        ${product.price?.toFixed(2)}
+                                                        {formatPrice(product.price)}
                                                     </span>
                                                     {product.stock <= 5 && product.stock > 0 && (
                                                         <span className="text-xs text-orange-500 bg-orange-100 dark:bg-orange-900/30 px-2 py-0.5 rounded-full">
