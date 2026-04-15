@@ -108,6 +108,10 @@ const CreateCategoryForm = ({ onSuccess, onCancel }) => {
                                         required: 'El nombre es requerido',
                                         minLength: { value: 3, message: 'Mínimo 3 caracteres' },
                                         maxLength: { value: 50, message: 'Máximo 50 caracteres' },
+                                        pattern: {
+                                            value: /^[a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s]+$/,
+                                            message: 'Solo se permiten letras, números y espacios',
+                                        },
                                     })}
                                     className={`w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-900 border rounded-xl focus:outline-none focus:ring-2 transition-all text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 ${
                                         errors.name

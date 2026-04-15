@@ -16,7 +16,7 @@ const productServices = {
      * @param {string} params.subcategory - Subcategoría (nombre o ID)
      * @returns {Promise<Object>} - Productos y metadata de paginación
      */
-    getProducts: async ({ page = 1, limit = 15, category, subcategory }) => {
+    getProducts: async ({ page = 1, limit = 15, category, subcategory, sort, minPrice, maxPrice, inStock }) => {
         try {
             let url = `${API_URL}?page=${page}&limit=${limit}`
 
@@ -26,6 +26,22 @@ const productServices = {
 
             if (subcategory) {
                 url += `&subcategory=${encodeURIComponent(subcategory)}`
+            }
+
+            if (sort && sort !== 'newest') {
+                url += `&sort=${encodeURIComponent(sort)}`
+            }
+
+            if (minPrice !== undefined && minPrice !== '') {
+                url += `&minPrice=${Number(minPrice)}`
+            }
+
+            if (maxPrice !== undefined && maxPrice !== '') {
+                url += `&maxPrice=${Number(maxPrice)}`
+            }
+
+            if (inStock) {
+                url += `&inStock=true`
             }
 
             const response = await api.get(url)

@@ -21,6 +21,10 @@ import AdminDashboard from './Pages/AdminDashboard/AdminDashboard'
 import ProtectedRoute from './Components/ProtectedRoute/ProtectedRoute'
 import GuestRoute from './Components/GuestRoute/GuestRoute'
 import AdminRoute from './Components/AdminRoute/AdminRoute'
+import ForgotPassword from './Pages/ForgotPassword'
+import NewsletterSuccess from './Pages/NewsletterSuccess'
+import NewsletterError from './Pages/NewsletterError'
+import ResetPassword from './Pages/ResetPassword'
 import Checkout from './Pages/Checkout'
 import PaymentSuccess from './Pages/PaymentSuccess'
 import PaymentFailure from './Pages/PaymentFailure'
@@ -45,26 +49,39 @@ function App() {
                                     <Routes>
                                         <Route element={<Layout />}>
                                             {/* RUTAS PÚBLICAS */}
-                                            <Route path="/" element={<Home />} />
+                                            <Route
+                                                path="/"
+                                                element={<Home />}
+                                            />
                                             <Route
                                                 path="/detailProduct/:id"
                                                 element={<DetailProduct />}
                                             />
-                                            <Route path="/contact" element={<Contact />} />
-                                            <Route path="/privacy" element={<Privacy />} />
-                                            <Route path="/terms" element={<Terms />} />
-                                            <Route path="/faq" element={<Faq />} />
-
-                                            {/* 👉 RUTA DE WISHLIST - PROTEGIDA */}
                                             <Route
-                                                path="/wishlist"
-                                                element={
-                                                    <ProtectedRoute>
-                                                        <Wishlist />
-                                                    </ProtectedRoute>
-                                                }
+                                                path="/contact"
+                                                element={<Contact />}
                                             />
-
+                                            <Route
+                                                path="/privacy"
+                                                element={<Privacy />}
+                                            />
+                                            <Route
+                                                path="/terms"
+                                                element={<Terms />}
+                                            />
+                                            <Route
+                                                path="/faq"
+                                                element={<Faq />}
+                                            />
+                                            <Route
+                                                path="/newsletter-success"
+                                                element={<NewsletterSuccess />}
+                                            />
+                                            <Route
+                                                path="/newsletter-error"
+                                                element={<NewsletterError />}
+                                            />
+                                            
                                             {/* RUTAS DE INVITADOS */}
                                             <Route
                                                 path="/login"
@@ -82,8 +99,23 @@ function App() {
                                                     </GuestRoute>
                                                 }
                                             />
-
+                                            <Route
+                                                path="/forgot-password"
+                                                element={<ForgotPassword />}
+                                            />
+                                            <Route
+                                                path="/reset-password"
+                                                element={<ResetPassword />}
+                                            />
                                             {/* RUTAS PROTEGIDAS */}
+                                            <Route
+                                                path="/wishlist"
+                                                element={
+                                                    <ProtectedRoute>
+                                                        <Wishlist />
+                                                    </ProtectedRoute>
+                                                }
+                                            />
                                             <Route
                                                 path="/checkout"
                                                 element={
@@ -167,8 +199,14 @@ function App() {
                                         />
 
                                         {/* 👇 RUTAS DE ERROR - FUERA DEL LAYOUT PRINCIPAL */}
-                                        <Route path="/500" element={<ServerError />} />
-                                        <Route path="*" element={<NotFound />} />
+                                        <Route
+                                            path="/500"
+                                            element={<ServerError />}
+                                        />
+                                        <Route
+                                            path="*"
+                                            element={<NotFound />}
+                                        />
                                     </Routes>
                                 </SearchProvider>
                             </ThemeProvider>

@@ -40,13 +40,14 @@ export const CategoryContextProvider = ({ children }) => {
     const createCategory = async (data) => {
         try {
             const response = await api.post('/categories', data)
-            toast.success('Categoría creada exitosamente')
             await getCategories()
             return { success: true, data: response.data }
         } catch (error) {
             console.error('Error al crear categoría:', error)
-            toast.error(error.response?.data?.message || 'Error al crear categoría')
-            return { success: false, error: error.response?.data }
+            return {
+                success: false,
+                message: error.response?.data?.message || 'Error al crear categoría',
+            }
         }
     }
 

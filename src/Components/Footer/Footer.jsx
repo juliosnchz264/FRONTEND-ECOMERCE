@@ -14,9 +14,12 @@ import {
     FiPackage,
     FiHome,
     FiStar,
+    FiCheckCircle,
+    FiAlertCircle,
 } from 'react-icons/fi'
 import { useState } from 'react'
 import { useProduct } from '../../Hooks/useProduct'
+import toast from 'react-hot-toast'
 
 const Footer = () => {
     const currentYear = new Date().getFullYear()
@@ -25,16 +28,39 @@ const Footer = () => {
     const { categories } = useProduct()
     const quickCategories = categories?.slice(0, 4) || []
 
-    const handleNewsletterSubmit = (e) => {
+    const handleNewsletterSubmit = async (e) => {
         e.preventDefault()
         if (!email) return
 
         setNewsletterStatus('loading')
-        setTimeout(() => {
-            setNewsletterStatus('success')
-            setEmail('')
+        
+        try {
+            const response = await fetch('/api/newsletter/subscribe', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email }),
+            })
+            
+            const data = await response.json()
+            
+            if (data.success) {
+                setNewsletterStatus('success')
+                toast.success(data.message || '¡Gracias por suscribirte!')
+                setEmail('')
+                setTimeout(() => setNewsletterStatus(null), 3000)
+            } else {
+                setNewsletterStatus('error')
+                toast.error(data.message || 'Error al suscribirte')
+                setTimeout(() => setNewsletterStatus(null), 3000)
+            }
+        } catch (error) {
+            console.error('Error en suscripción:', error)
+            setNewsletterStatus('error')
+            toast.error('Error de conexión. Intenta nuevamente.')
             setTimeout(() => setNewsletterStatus(null), 3000)
-        }, 1000)
+        }
     }
 
     return (
@@ -64,34 +90,34 @@ const Footer = () => {
 
                         <div className="flex gap-2 pt-2">
                             <a
-                                href="https://facebook.com"
+                                href="https://www.facebook.com/chris.joslin.5832/"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="w-9 h-9 bg-gray-200 dark:bg-gray-700/50 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-purple-600 hover:text-white transition-all hover:scale-110"
+                                className="w-9 h-9 bg-gray-200 dark:bg-gray-700/50 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-[#1877f2] hover:text-white transition-all hover:scale-110"
                             >
                                 <FiFacebook className="w-4 h-4" />
                             </a>
                             <a
-                                href="https://twitter.com"
+                                href="https://x.com/julio264eduu"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="w-9 h-9 bg-gray-200 dark:bg-gray-700/50 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-blue-400 hover:text-white transition-all hover:scale-110"
+                                className="w-9 h-9 bg-gray-200 dark:bg-gray-700/50 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-[#1da1f2] hover:text-white transition-all hover:scale-110"
                             >
                                 <FiTwitter className="w-4 h-4" />
                             </a>
                             <a
-                                href="https://instagram.com"
+                                href="https://www.instagram.com/juliooosnchzzz/"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="w-9 h-9 bg-gray-200 dark:bg-gray-700/50 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-pink-600 hover:text-white transition-all hover:scale-110"
+                                className="w-9 h-9 bg-gray-200 dark:bg-gray-700/50 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gradient-to-tr hover:from-[#f09433] hover:via-[#d62976] hover:to-[#962fbf] hover:text-white transition-all hover:scale-110"
                             >
                                 <FiInstagram className="w-4 h-4" />
                             </a>
                             <a
-                                href="https://github.com"
+                                href="https://github.com/juliosnchz264"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="w-9 h-9 bg-gray-200 dark:bg-gray-700/50 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-600 hover:text-white transition-all hover:scale-110"
+                                className="w-9 h-9 bg-gray-200 dark:bg-gray-700/50 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-[#333] hover:text-white transition-all hover:scale-110"
                             >
                                 <FiGithub className="w-4 h-4" />
                             </a>
@@ -127,7 +153,7 @@ const Footer = () => {
                                                 )
                                             }
                                         }}
-                                        className="text-gray-300 hover:text-purple-400 transition-all flex items-center gap-2 group"
+                                        className="text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-all flex items-center gap-2 group"
                                     >
                                         <span className="w-1.5 h-1.5 bg-purple-400 rounded-full group-hover:w-2 group-hover:bg-purple-300 transition-all"></span>
                                         <span className="text-sm">
@@ -204,9 +230,12 @@ const Footer = () => {
                         <ul className="space-y-3">
                             <li className="flex items-start gap-3 text-gray-600 dark:text-gray-300 group">
                                 <FiMail className="w-5 h-5 text-purple-500 dark:text-purple-400 flex-shrink-0 mt-0.5" />
-                                <span className="text-sm break-all">
-                                    soporte@ecommerce.com
-                                </span>
+                                <a 
+                                    href="mailto:julio264edu@gmail.com"
+                                    className="text-sm break-all hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+                                >
+                                    julio264edu@gmail.com
+                                </a>
                             </li>
                             <li className="flex items-start gap-3 text-gray-600 dark:text-gray-300">
                                 <FiPhone className="w-5 h-5 text-purple-500 dark:text-purple-400 flex-shrink-0 mt-0.5" />
@@ -238,10 +267,14 @@ const Footer = () => {
                                 <button
                                     type="submit"
                                     disabled={newsletterStatus === 'loading'}
-                                    className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-r-lg hover:from-purple-700 hover:to-purple-800 transition-all disabled:opacity-50"
+                                    className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-r-lg hover:from-purple-700 hover:to-purple-800 transition-all disabled:opacity-50 flex items-center justify-center min-w-[42px]"
                                 >
                                     {newsletterStatus === 'loading' ? (
-                                        <span className="loading loading-spinner loading-xs"></span>
+                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                    ) : newsletterStatus === 'success' ? (
+                                        <FiCheckCircle className="w-4 h-4" />
+                                    ) : newsletterStatus === 'error' ? (
+                                        <FiAlertCircle className="w-4 h-4" />
                                     ) : (
                                         <FiSend className="w-4 h-4" />
                                     )}
@@ -250,6 +283,11 @@ const Footer = () => {
                             {newsletterStatus === 'success' && (
                                 <p className="text-xs text-green-500 dark:text-green-400 mt-2 animate-fadeIn">
                                     ¡Gracias por suscribirte!
+                                </p>
+                            )}
+                            {newsletterStatus === 'error' && (
+                                <p className="text-xs text-red-500 dark:text-red-400 mt-2 animate-fadeIn">
+                                    Error al suscribirte. Intenta nuevamente.
                                 </p>
                             )}
                         </div>
@@ -266,7 +304,7 @@ const Footer = () => {
                         <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm flex items-center gap-1">
                             Hecho con{' '}
                             <FiHeart className="text-red-500 animate-pulse w-3 h-3 sm:w-4 sm:h-4" />{' '}
-                            para nuestros clientes
+                            por Julio
                         </p>
                         <div className="flex gap-4 text-xs sm:text-sm">
                             <Link

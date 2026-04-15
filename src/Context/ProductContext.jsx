@@ -22,6 +22,12 @@ export const ProductContextProvider = ({ children }) => {
         return Number.isFinite(page) && page >= 1 ? page : 1
     })
 
+    // Filtros avanzados
+    const [selectedSort, setSelectedSort] = useState(searchParams.get('sort') || 'newest')
+    const [selectedMinPrice, setSelectedMinPrice] = useState(searchParams.get('minPrice') || '')
+    const [selectedMaxPrice, setSelectedMaxPrice] = useState(searchParams.get('maxPrice') || '')
+    const [selectedInStock, setSelectedInStock] = useState(searchParams.get('inStock') === 'true')
+
     const [products, setProducts] = useState([])
     const [productsLoading, setProductsLoading] = useState(true)
     const [error, setError] = useState(null)
@@ -91,7 +97,7 @@ export const ProductContextProvider = ({ children }) => {
                 ? getSubcategoryIdFromName(selectedSubcategory)
                 : selectedSubcategory
 
-        const fetchKey = `${currentPage}-${itemsPerPage}-${selectedCategory}-${subcategoryId || 'none'}`
+        const fetchKey = `${currentPage}-${itemsPerPage}-${selectedCategory}-${subcategoryId || 'none'}-${selectedSort}-${selectedMinPrice}-${selectedMaxPrice}-${selectedInStock}`
 
         // Evitar fetch duplicado
         if (isFetchingRef.current && lastFetchKeyRef.current === fetchKey) {
@@ -110,6 +116,10 @@ export const ProductContextProvider = ({ children }) => {
                 limit: itemsPerPage,
                 category: selectedCategory !== 'Todos' ? selectedCategory : undefined,
                 subcategory: subcategoryId,
+                sort: selectedSort !== 'newest' ? selectedSort : undefined,
+                minPrice: selectedMinPrice || undefined,
+                maxPrice: selectedMaxPrice || undefined,
+                inStock: selectedInStock || undefined,
             })
 
             if (result.success) {
@@ -133,6 +143,10 @@ export const ProductContextProvider = ({ children }) => {
         itemsPerPage,
         selectedCategory,
         selectedSubcategory,
+        selectedSort,
+        selectedMinPrice,
+        selectedMaxPrice,
+        selectedInStock,
         getSubcategoryIdFromName,
     ])
 
@@ -174,11 +188,21 @@ export const ProductContextProvider = ({ children }) => {
 
         isUpdatingFromUrlRef.current = true
 
+        // Filtros avanzados desde URL
+        const urlSort = searchParams.get('sort') || 'newest'
+        const urlMinPrice = searchParams.get('minPrice') || ''
+        const urlMaxPrice = searchParams.get('maxPrice') || ''
+        const urlInStock = searchParams.get('inStock') === 'true'
+
         if (categoryWasInvalid || subcategoryWasInvalid) {
             const cleanParams = new URLSearchParams()
             if (urlCategory !== 'Todos') cleanParams.set('categoria', urlCategory)
             if (urlSubcategory) cleanParams.set('subcategoria', urlSubcategory)
             if (urlPage > 1) cleanParams.set('page', urlPage.toString())
+            if (urlSort !== 'newest') cleanParams.set('sort', urlSort)
+            if (urlMinPrice) cleanParams.set('minPrice', urlMinPrice)
+            if (urlMaxPrice) cleanParams.set('maxPrice', urlMaxPrice)
+            if (urlInStock) cleanParams.set('inStock', 'true')
             setSearchParams(cleanParams, { replace: true })
         }
 
@@ -199,6 +223,26 @@ export const ProductContextProvider = ({ children }) => {
             needsUpdate = true
         }
 
+        if (selectedSort !== urlSort) {
+            setSelectedSort(urlSort)
+            needsUpdate = true
+        }
+
+        if (selectedMinPrice !== urlMinPrice) {
+            setSelectedMinPrice(urlMinPrice)
+            needsUpdate = true
+        }
+
+        if (selectedMaxPrice !== urlMaxPrice) {
+            setSelectedMaxPrice(urlMaxPrice)
+            needsUpdate = true
+        }
+
+        if (selectedInStock !== urlInStock) {
+            setSelectedInStock(urlInStock)
+            needsUpdate = true
+        }
+
         if (needsUpdate) {
             // URL synced with state
         }
@@ -206,7 +250,7 @@ export const ProductContextProvider = ({ children }) => {
         setTimeout(() => {
             isUpdatingFromUrlRef.current = false
         }, 100)
-    }, [searchParams, selectedCategory, selectedSubcategory, currentPage, categories, subcategories, getSubcategoryNameFromId, setSearchParams])
+    }, [searchParams, selectedCategory, selectedSubcategory, currentPage, selectedSort, selectedMinPrice, selectedMaxPrice, selectedInStock, categories, subcategories, getSubcategoryNameFromId, setSearchParams])
 
     // 👉 EFECTO: Cargar productos cuando cambian los parámetros
     useEffect(() => {
@@ -270,6 +314,12 @@ export const ProductContextProvider = ({ children }) => {
                 newParams.set('subcategoria', subcategoryValue)
             }
 
+            // Preservar filtros avanzados al cambiar categoría
+            if (selectedSort && selectedSort !== 'newest') newParams.set('sort', selectedSort)
+            if (selectedMinPrice) newParams.set('minPrice', selectedMinPrice)
+            if (selectedMaxPrice) newParams.set('maxPrice', selectedMaxPrice)
+            if (selectedInStock) newParams.set('inStock', 'true')
+
             newParams.set('page', '1')
 
             setSearchParams(newParams, { replace: true })
@@ -284,13 +334,63 @@ export const ProductContextProvider = ({ children }) => {
                 isUpdatingFromUrlRef.current = false
             }, 100)
         },
-        [setSearchParams, getSubcategoryNameFromId],
+        [setSearchParams, getSubcategoryNameFromId, selectedSort, selectedMinPrice, selectedMaxPrice, selectedInStock],
     )
 
     const resetFilters = useCallback(() => {
+        setSelectedSort('newest')
+        setSelectedMinPrice('')
+        setSelectedMaxPrice('')
+        setSelectedInStock(false)
         setSearchParams({ page: '1' }, { replace: true })
         window.scrollTo({ top: 0, behavior: 'smooth' })
     }, [setSearchParams])
+
+    // Ordenamiento
+    const setSort = useCallback((sort) => {
+        isUpdatingFromUrlRef.current = true
+        setSelectedSort(sort)
+        setCurrentPage(1)
+        const newParams = new URLSearchParams(searchParams)
+        if (sort && sort !== 'newest') {
+            newParams.set('sort', sort)
+        } else {
+            newParams.delete('sort')
+        }
+        newParams.set('page', '1')
+        setSearchParams(newParams, { replace: true })
+        setTimeout(() => { isUpdatingFromUrlRef.current = false }, 300)
+    }, [searchParams, setSearchParams])
+
+    // Rango de precio
+    const setPriceRange = useCallback((min, max) => {
+        isUpdatingFromUrlRef.current = true
+        setSelectedMinPrice(min !== undefined ? String(min) : '')
+        setSelectedMaxPrice(max !== undefined ? String(max) : '')
+        setCurrentPage(1)
+        const newParams = new URLSearchParams(searchParams)
+        if (min !== '' && min !== undefined) newParams.set('minPrice', String(min))
+        else newParams.delete('minPrice')
+        if (max !== '' && max !== undefined) newParams.set('maxPrice', String(max))
+        else newParams.delete('maxPrice')
+        newParams.set('page', '1')
+        setSearchParams(newParams, { replace: true })
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+        setTimeout(() => { isUpdatingFromUrlRef.current = false }, 300)
+    }, [searchParams, setSearchParams])
+
+    // Solo en stock
+    const setInStock = useCallback((value) => {
+        isUpdatingFromUrlRef.current = true
+        setSelectedInStock(value)
+        setCurrentPage(1)
+        const newParams = new URLSearchParams(searchParams)
+        if (value) newParams.set('inStock', 'true')
+        else newParams.delete('inStock')
+        newParams.set('page', '1')
+        setSearchParams(newParams, { replace: true })
+        setTimeout(() => { isUpdatingFromUrlRef.current = false }, 300)
+    }, [searchParams, setSearchParams])
 
     const changeItemsPerPage = useCallback(
         (newLimit) => {
@@ -344,11 +444,20 @@ export const ProductContextProvider = ({ children }) => {
         subcategories,
         getSubcategories,
         
-        // Filtros
+        // Filtros base
         selectedCategory,
         selectedSubcategory,
         filterByCategory,
         resetFilters,
+
+        // Filtros avanzados
+        selectedSort,
+        selectedMinPrice,
+        selectedMaxPrice,
+        selectedInStock,
+        setSort,
+        setPriceRange,
+        setInStock,
         
         // Paginación
         currentPage,

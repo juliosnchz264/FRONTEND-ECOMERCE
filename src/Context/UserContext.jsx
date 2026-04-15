@@ -4,6 +4,7 @@ import {
     getProfileService,
     logoutService,
     checkSessionService,
+    refreshTokenService,
     setAccessToken,
 } from '../services/authServices'
 import { useBroadcastAuth } from '../Hooks/useBroadcastAuth'
@@ -76,7 +77,16 @@ export const UserContextProvider = ({ children }) => {
 
         checkSessionTimeoutRef.current = setTimeout(async () => {
             try {
-                const result = await checkSessionService()
+                let result = await checkSessionService()
+
+                // Access token may have expired — try a silent refresh (uses the httpOnly
+                // refresh_token cookie, which persists if "remember me" was checked)
+                if (!result.authenticated) {
+                    const refreshed = await refreshTokenService()
+                    if (refreshed.success) {
+                        result = await checkSessionService()
+                    }
+                }
 
                 if (result.success && result.authenticated) {
                     const currentUserJSON = JSON.stringify(userInfo)

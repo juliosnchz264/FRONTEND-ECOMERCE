@@ -4,14 +4,23 @@ import api from './api'
 // 🟢 Evento personalizado para cambios en el token
 const TOKEN_EVENT = 'token-changed'
 
-// Access token stored on window so the api.js interceptor can read it without circular imports
-if (typeof window !== 'undefined' && !window.__accessToken) {
-    window.__accessToken = null;
+// Access token stored on window + sessionStorage so it survives page reloads (e.g. returning from Stripe)
+if (typeof window !== 'undefined') {
+    if (!window.__accessToken) {
+        // Restore from sessionStorage on page reload
+        window.__accessToken = sessionStorage.getItem('_at') || null;
+    }
 }
 
-// Getter for backwards compatibility
 const getToken = () => window.__accessToken;
-const setToken = (t) => { window.__accessToken = t; }
+const setToken = (t) => {
+    window.__accessToken = t;
+    if (t) {
+        sessionStorage.setItem('_at', t);
+    } else {
+        sessionStorage.removeItem('_at');
+    }
+}
 
 // 🟢 Helper para logging de respuestas (SOLO en desarrollo)
 const logResponse = (method, url, response, isError = false) => {
@@ -75,10 +84,8 @@ export const getAccessToken = () => {
  * Limpiar token (útil para logout)
  */
 export const clearAccessToken = () => {
-    if (getToken()) {
-        setToken(null)
-        dispatchTokenEvent(null)
-    }
+    setToken(null)
+    dispatchTokenEvent(null)
 }
 
 // ============================================
@@ -88,9 +95,9 @@ export const clearAccessToken = () => {
 /**
  * Servicio de Login
  */
-export const loginService = async (email, password) => {
+export const loginService = async (email, password, rememberMe = false) => {
     try {
-        const response = await api.post('/auth/login', { email, password })
+        const response = await api.post('/auth/login', { email, password, rememberMe })
 
         if (response.status >= 200 && response.status < 300) {
             if (response.data.accessToken) {
@@ -197,27 +204,31 @@ export const checkSessionService = async () => {
     }
 
     try {
-        // 🚨 USAR VALIDATE STATUS para evitar errores en consola
         const response = await api.get('/auth/check-session', {
-            validateStatus: function (status) {
-                return status < 500 // 401 es "válido" para nosotros
-            },
+            validateStatus: (status) => status < 500,
         })
 
-        // Si llegamos aquí, la sesión es válida (status 200)
-        return {
-            success: true,
-            authenticated: true,
-            user: response.data.user,
-            accessToken: response.data.accessToken,
-            status: response.status,
+        // El backend siempre devuelve 200 con { authenticated: true/false }
+        if (response.data?.authenticated && response.data?.user) {
+            return {
+                success: true,
+                authenticated: true,
+                user: response.data.user,
+                accessToken: response.data.accessToken,
+                status: response.status,
+            }
         }
-    } catch (error) {
-        // 🚨 SILENCIOSAMENTE devolver no autenticado
+
         return {
             success: false,
             authenticated: false,
-            status: 401,
+            status: response.status,
+        }
+    } catch (error) {
+        return {
+            success: false,
+            authenticated: false,
+            status: 0,
         }
     }
 }

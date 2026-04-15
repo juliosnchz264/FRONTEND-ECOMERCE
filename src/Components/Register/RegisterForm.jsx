@@ -1,7 +1,7 @@
 // src/Components/Auth/RegisterForm.jsx
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { useNavigate } from 'react-router'
+import { useNavigate, Link } from 'react-router'  // 👈 Agregar Link
 import { FaEye, FaEyeSlash, FaUser, FaEnvelope, FaLock, FaArrowRight, FaCheckCircle } from 'react-icons/fa'
 import { registerService } from '../../services/authServices'
 import { useUser } from '../../Hooks/useUser.js'
@@ -285,16 +285,22 @@ const RegisterForm = () => {
                 )}
             </motion.button>
 
-            {/* Términos y condiciones */}
+            {/* Términos y condiciones - ACTUALIZADO con Links */}
             <p className="text-xs text-gray-500 dark:text-gray-500 text-center mt-4">
                 Al registrarte, aceptas nuestros{' '}
-                <a href="#" className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 hover:underline transition-colors">
+                <Link 
+                    to="/terms" 
+                    className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 hover:underline transition-colors"
+                >
                     Términos y condiciones
-                </a>{' '}
+                </Link>{' '}
                 y{' '}
-                <a href="#" className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 hover:underline transition-colors">
+                <Link 
+                    to="/privacy" 
+                    className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 hover:underline transition-colors"
+                >
                     Política de privacidad
-                </a>
+                </Link>
             </p>
         </form>
     )

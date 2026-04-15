@@ -6,22 +6,21 @@ import UpdateProduct from './UpdateProducts'
 import Categories from './Categories'
 import Subcategories from './Subcategories'
 import TableUsers from '../../Components/AdminDashboard/TableUsers/TableUsers'
+import Analytics from './Analytics'
 
 const AdminDashboard = () => {
     return (
         <section>
             <Routes>
                 <Route path="/" element={<DashboardLayout />}>
-                    {/* Rutas de productos */}
                     <Route index element={<TableProductDashboard />} />
                     <Route path="products" element={<TableProductDashboard />} />
                     <Route path="products/createProduct" element={<CreateProduct />} />
                     <Route path="products/updateProduct/:id" element={<UpdateProduct />} />
-                    
-                    {/* NUEVAS RUTAS: Categorías y Subcategorías */}
                     <Route path="categories" element={<Categories />} />
                     <Route path="subcategories" element={<Subcategories />} />
                     <Route path="users" element={<TableUsers />} />
+                    <Route path="analytics" element={<Analytics />} />
                 </Route>
             </Routes>
         </section>

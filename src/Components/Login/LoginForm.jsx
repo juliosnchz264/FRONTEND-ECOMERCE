@@ -1,7 +1,13 @@
 // src/Components/Auth/LoginForm.jsx
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { FaEye, FaEyeSlash, FaEnvelope, FaLock, FaArrowRight } from 'react-icons/fa'
+import {
+    FaEye,
+    FaEyeSlash,
+    FaEnvelope,
+    FaLock,
+    FaArrowRight,
+} from 'react-icons/fa'
 import { useNavigate, useLocation } from 'react-router'
 import { loginService } from '../../services/authServices'
 import { useUser } from '../../Hooks/useUser.js'
@@ -23,13 +29,14 @@ const LoginForm = () => {
     const location = useLocation()
     const [showPassword, setShowPassword] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [rememberMe, setRememberMe] = useState(false)
 
     const from = location.state?.from?.pathname
 
     const onSubmit = async (data) => {
         try {
             setIsSubmitting(true)
-            const result = await loginService(data.email, data.password)
+            const result = await loginService(data.email, data.password, rememberMe)
 
             if (result && result.success) {
                 login(result.user, result.accessToken)
@@ -102,6 +109,7 @@ const LoginForm = () => {
                     </label>
                     <button
                         type="button"
+                        onClick={() => navigate('/forgot-password')}
                         className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 hover:underline transition-colors"
                     >
                         ¿Olvidaste tu contraseña?
@@ -149,6 +157,25 @@ const LoginForm = () => {
                         {errors.password.message}
                     </motion.p>
                 )}
+            </div>
+
+            {/* Recordarme */}
+            <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer select-none group">
+                    <div className="relative">
+                        <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={rememberMe}
+                            onChange={(e) => setRememberMe(e.target.checked)}
+                        />
+                        <div className="w-10 h-5 bg-gray-200 dark:bg-gray-700 rounded-full peer-checked:bg-purple-600 transition-colors duration-200"></div>
+                        <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 peer-checked:translate-x-5"></div>
+                    </div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400 group-hover:text-gray-800 dark:group-hover:text-gray-200 transition-colors">
+                        Recordarme por 30 días
+                    </span>
+                </label>
             </div>
 
             {/* Botón de submit */}
