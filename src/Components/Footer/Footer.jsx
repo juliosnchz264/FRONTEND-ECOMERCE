@@ -243,7 +243,7 @@ const Footer = () => {
                             </li>
                             <li className="flex items-start gap-3 text-gray-600 dark:text-gray-300">
                                 <FiMapPin className="w-5 h-5 text-purple-500 dark:text-purple-400 flex-shrink-0 mt-0.5" />
-                                <span>Madrid, España</span>
+                                <span>Mallorca, España</span>
                             </li>
                         </ul>
 

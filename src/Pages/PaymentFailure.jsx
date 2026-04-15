@@ -8,9 +8,11 @@ import { motion } from 'framer-motion'
 
 const PaymentFailure = () => {
     const [searchParams] = useSearchParams()
-    const paymentId = searchParams.get('payment_id')
-    const status = searchParams.get('status')
-    const merchantOrder = searchParams.get('merchant_order_id')
+    // Strip non-alphanumeric chars to prevent reflected text injection via URL params
+    const sanitizeParam = (val) => val ? val.replace(/[^a-zA-Z0-9_\-. ]/g, '').slice(0, 100) : null
+    const paymentId = sanitizeParam(searchParams.get('payment_id'))
+    const status = sanitizeParam(searchParams.get('status'))
+    const merchantOrder = sanitizeParam(searchParams.get('merchant_order_id'))
 
     useEffect(() => {
         toast.error('El pago no pudo ser procesado')

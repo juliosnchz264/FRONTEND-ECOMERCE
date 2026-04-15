@@ -4,7 +4,11 @@ import { FiCheckCircle, FiArrowRight } from 'react-icons/fi'
 
 const NewsletterSuccess = () => {
     const [searchParams] = useSearchParams()
-    const email = searchParams.get('email')
+    const rawEmail = searchParams.get('email')
+    // Validate email format before displaying — prevents arbitrary text injection via URL
+    const email = rawEmail && /^[^\s@]+@([^\s@]+\.)+[^\s@]+$/.test(rawEmail.trim())
+        ? rawEmail.trim()
+        : null
     
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-purple-50/30 flex items-center justify-center p-4">

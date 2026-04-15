@@ -8,9 +8,9 @@ const Profile = () => {
     const { userInfo } = useUser()
     const baseServerUrl = import.meta.env.VITE_BACKEND_URL.replace('/api', '');
 
-    const avatarSrc = userInfo?.avatar 
+    const avatarSrc = userInfo?.avatar
         ? (userInfo.avatar.startsWith('http') ? userInfo.avatar : `${baseServerUrl}${userInfo.avatar}`)
-        : `https://ui-avatars.com/api/?name=${userInfo?.username || 'User'}&background=6366f1&color=fff&bold=true&size=128`;
+        : `https://ui-avatars.com/api/?name=${encodeURIComponent(userInfo?.username || 'User')}&background=6366f1&color=fff&bold=true&size=128`;
 
     // Fecha de registro simulada (puedes agregarla desde el backend)
     const joinDate = userInfo?.createdAt 
@@ -55,8 +55,8 @@ const Profile = () => {
                                                 src={avatarSrc} 
                                                 alt="Avatar" 
                                                 className="object-cover w-full h-full"
-                                                onError={(e) => { 
-                                                    e.target.src = `https://ui-avatars.com/api/?name=${userInfo?.username || 'User'}&background=6366f1&color=fff`;
+                                                onError={(e) => {
+                                                    e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userInfo?.username || 'User')}&background=6366f1&color=fff`;
                                                 }}
                                             />
                                         </div>

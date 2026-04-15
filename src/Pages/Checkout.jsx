@@ -23,6 +23,28 @@ import {
     FiPackage
 } from 'react-icons/fi'
 import { motion } from 'framer-motion'
+// Dominios permitidos para la pasarela de pago
+const ALLOWED_PAYMENT_DOMAINS = [
+    'mercadopago.com',
+    'mercadolibre.com',
+    'stripe.com',
+    'checkout.stripe.com',
+    'js.stripe.com',
+    'paypal.com',
+    'sandbox.paypal.com',
+]
+
+const isAllowedPaymentUrl = (url) => {
+    try {
+        const parsed = new URL(url)
+        if (!['https:'].includes(parsed.protocol)) return false
+        return ALLOWED_PAYMENT_DOMAINS.some(domain =>
+            parsed.hostname === domain || parsed.hostname.endsWith('.' + domain)
+        )
+    } catch {
+        return false
+    }
+}
 
 const Checkout = () => {
     const { cart, total, clearCart, loading: cartLoading } = useCart()
@@ -104,6 +126,9 @@ const Checkout = () => {
                 sessionStorage.setItem('checkoutCart', JSON.stringify(cart))
                 
                 const cleanUrl = response.paymentUrl.trim()
+                if (!isAllowedPaymentUrl(cleanUrl)) {
+                    throw new Error('URL de pago no permitida')
+                }
                 window.location.href = cleanUrl
             } else {
                 throw new Error('No se pudo obtener la pasarela de pago')
