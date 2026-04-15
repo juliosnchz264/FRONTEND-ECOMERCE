@@ -1,32 +1,30 @@
-# Robots.txt para E-Commerce
+# robots.txt — TazaShop
+# Replace TU_DOMINIO_AQUI with your real production domain
+
 User-agent: *
 Allow: /
 Disallow: /admin/
 Disallow: /profile/
+Disallow: /settings/
 Disallow: /checkout/
 Disallow: /payment/
+Disallow: /orders/
 Disallow: /verify-email
 Disallow: /verify-email-pending
 Disallow: /api/
 
-# Sitemap
-Sitemap: https://tusitio.com/sitemap.xml
-
-# Crawl-delay
-Crawl-delay: 10
-
-# Host
-Host: https://tusitio.com
-
-# User-agent: Googlebot
 User-agent: Googlebot
 Allow: /
 Disallow: /admin/
 Disallow: /profile/
 Disallow: /checkout/
 
-# User-agent: Bingbot
 User-agent: Bingbot
 Allow: /
 Disallow: /admin/
 Disallow: /profile/
+Disallow: /checkout/
+
+Crawl-delay: 5
+
+Sitemap: https://TU_DOMINIO_AQUI/sitemap.xml

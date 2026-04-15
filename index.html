@@ -1,68 +1,99 @@
 <!doctype html>
 <html lang="es" data-theme="lofi">
     <head>
-        <meta charset="UTF-8npm ru" />
+        <meta charset="UTF-8" />
         <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+        <link rel="apple-touch-icon" sizes="192x192" href="/logo-192.png" />
+        <link rel="manifest" href="/manifest.json" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="theme-color" content="#8B5CF6" />
+
+        <!-- SEO primary -->
+        <title>TazaShop | Tazas y Mugs artesanales online</title>
         <meta
             name="description"
-            content="E-Commerce - Tu tienda online de confianza. Encuentra los mejores productos con los precios más competitivos."
+            content="Descubre nuestra colección de tazas y mugs únicos. Diseños artesanales, personalizables y de calidad. Envío gratis en compras mayores a 40€."
         />
         <meta
             name="keywords"
-            content="ecommerce, tienda online, compras, productos, ofertas"
+            content="tazas, mugs, tazas artesanales, tazas personalizadas, tazas de cerámica, regalos originales, tienda online"
         />
-        <meta name="author" content="E-Commerce" />
+        <meta name="author" content="TazaShop" />
         <meta name="robots" content="index, follow" />
-
-        <title>E-Commerce | Tu tienda online de confianza</title>
+        <link rel="canonical" href="https://tusitio.com/" />
 
         <!-- Open Graph / Facebook -->
         <meta property="og:type" content="website" />
-        <meta property="og:title" content="E-Commerce - Tu tienda online" />
+        <meta property="og:site_name" content="TazaShop" />
+        <meta property="og:url" content="https://tusitio.com/" />
+        <meta property="og:title" content="TazaShop | Tazas y Mugs artesanales online" />
         <meta
             property="og:description"
-            content="Descubre los mejores productos con los precios más competitivos. Envío gratis en compras mayores a $50."
+            content="Descubre nuestra colección de tazas y mugs únicos. Diseños artesanales, personalizables y de calidad. Envío gratis en compras mayores a 40€."
         />
-        <meta property="og:image" content="/og-image.jpg" />
+        <meta property="og:image" content="https://tusitio.com/og-image.jpg" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:locale" content="es_ES" />
 
-        <!-- Twitter -->
-        <meta property="twitter:card" content="summary_large_image" />
+        <!-- Twitter Card -->
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:site" content="@tusitio" />
+        <meta name="twitter:title" content="TazaShop | Tazas y Mugs artesanales online" />
         <meta
-            property="twitter:title"
-            content="E-Commerce - Tu tienda online"
+            name="twitter:description"
+            content="Descubre nuestra colección de tazas y mugs únicos. Diseños artesanales y personalizables."
         />
-        <meta
-            property="twitter:description"
-            content="Descubre los mejores productos con los precios más competitivos."
-        />
-        <meta property="twitter:image" content="/og-image.jpg" />
+        <meta name="twitter:image" content="https://tusitio.com/og-image.jpg" />
+
+        <!-- JSON-LD structured data -->
+        <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "OnlineStore",
+            "name": "TazaShop",
+            "url": "https://tusitio.com",
+            "logo": "https://tusitio.com/logo-512.png",
+            "description": "Tienda online de tazas y mugs artesanales y personalizados.",
+            "currenciesAccepted": "EUR",
+            "priceRange": "€€",
+            "inLanguage": "es",
+            "potentialAction": {
+                "@type": "SearchAction",
+                "target": {
+                    "@type": "EntryPoint",
+                    "urlTemplate": "https://tusitio.com/?search={search_term_string}"
+                },
+                "query-input": "required name=search_term_string"
+            }
+        }
+        </script>
+
+        <!-- Preconnect to external services -->
+        <link rel="preconnect" href="https://res.cloudinary.com" />
+        <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+
+        <!-- Dark mode + FOUC prevention -->
         <script>
             ;(function () {
                 try {
-                    // Leer preferencia guardada
                     const savedTheme = localStorage.getItem('theme')
-                    // Detectar preferencia del sistema
                     const prefersDark = window.matchMedia(
                         '(prefers-color-scheme: dark)',
                     ).matches
-                    // Determinar tema final
                     const isDark =
                         savedTheme === 'dark' || (!savedTheme && prefersDark)
 
-                    // Aplicar clase INMEDIATAMENTE
                     if (isDark) {
                         document.documentElement.classList.add('dark')
                     } else {
                         document.documentElement.classList.remove('dark')
                     }
 
-                    // Ocultar contenido hasta que React cargue para evitar flash
                     const style = document.createElement('style')
                     style.textContent = '#root { opacity: 0; }'
                     document.head.appendChild(style)
 
-                    // Mostrar contenido después de que React se monte
                     window.addEventListener('load', () => {
                         setTimeout(() => {
                             style.remove()
@@ -74,9 +105,7 @@
             })()
         </script>
 
-        <!-- Estilo de fondo de emergencia -->
         <style>
-            /* Fondo base para evitar flashes blancos */
             html,
             body {
                 background-color: #ffffff;
@@ -87,12 +116,10 @@
             html.dark body {
                 background-color: #111827;
             }
-            /* Ocultar contenido inicialmente */
             #root {
                 opacity: 0;
                 transition: opacity 0.1s ease;
             }
-            /* Mostrar contenido cuando la página está lista */
             body.loaded #root {
                 opacity: 1;
             }
