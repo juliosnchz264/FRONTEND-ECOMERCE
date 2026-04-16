@@ -33,6 +33,7 @@ import NotFound from './Pages/NotFound'
 import ServerError from './Pages/ServerError'
 import VerifyEmail from './Pages/VerifyEmail'
 import VerifyEmailPending from './Pages/VerifyEmailPending'
+import ConfirmNewsletter from './Pages/ConfirmNewsletter'
 import Contact from './Pages/Contact/Contact'
 import Privacy from './Pages/Privacy/Privacy'
 import Terms from './Pages/Terms/Terms'
@@ -188,7 +189,7 @@ function App() {
                                             }
                                         />
 
-                                        {/* 👇 RUTAS DE VERIFICACIÓN DE EMAIL - FUERA DEL LAYOUT PRINCIPAL */}
+                                        {/* 👇 RUTAS DE VERIFICACIÓN - FUERA DEL LAYOUT PRINCIPAL */}
                                         <Route
                                             path="/verify-email"
                                             element={<VerifyEmail />}
@@ -196,6 +197,10 @@ function App() {
                                         <Route
                                             path="/verify-email-pending"
                                             element={<VerifyEmailPending />}
+                                        />
+                                        <Route
+                                            path="/confirm-newsletter"
+                                            element={<ConfirmNewsletter />}
                                         />
 
                                         {/* 👇 RUTAS DE ERROR - FUERA DEL LAYOUT PRINCIPAL */}
