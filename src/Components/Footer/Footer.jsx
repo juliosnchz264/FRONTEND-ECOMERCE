@@ -20,6 +20,7 @@ import {
 import { useState } from 'react'
 import { useProduct } from '../../Hooks/useProduct'
 import toast from 'react-hot-toast'
+import api from '../../services/api'
 
 const Footer = () => {
     const currentYear = new Date().getFullYear()
@@ -35,16 +36,8 @@ const Footer = () => {
         setNewsletterStatus('loading')
         
         try {
-            const response = await fetch('/api/newsletter/subscribe', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email }),
-            })
-            
-            const data = await response.json()
-            
+            const { data } = await api.post('/newsletter/subscribe', { email })
+
             if (data.success) {
                 setNewsletterStatus('success')
                 toast.success(data.message || '¡Gracias por suscribirte!')
