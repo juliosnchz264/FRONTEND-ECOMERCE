@@ -60,6 +60,11 @@ const Navbar = () => {
         return () => { document.body.style.overflow = '' }
     }, [isMobileMenuOpen])
 
+    // Limpiar query cada vez que se abre el buscador (siempre parte limpio)
+    useEffect(() => {
+        if (isSearchExpanded) handleQueryChange('')
+    }, [isSearchExpanded]) // eslint-disable-line react-hooks/exhaustive-deps
+
     // Cerrar búsqueda desktop al click fuera
     useEffect(() => {
         if (!isSearchExpanded) return
@@ -191,6 +196,7 @@ const Navbar = () => {
                                                 onSearch={(q) => { handleSearch(q); setIsSearchExpanded(false) }}
                                                 onQueryChange={handleQueryChange}
                                                 showSearchIcon={false}
+                                                autoFocus
                                             />
                                         </motion.div>
                                     )}

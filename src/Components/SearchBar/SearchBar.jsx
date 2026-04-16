@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { FiSearch, FiX } from 'react-icons/fi'
 import api from '../../services/api'
 
-const SearchBar = ({ value = '', onSearch, onQueryChange, className = '', showSearchIcon = true }) => {
+const SearchBar = ({ value = '', onSearch, onQueryChange, className = '', showSearchIcon = true, autoFocus = false }) => {
     // Si el padre pasa value, usamos eso; si no, estado local
     const isControlled = value !== undefined && onQueryChange
     const [localQuery, setLocalQuery] = useState('')
@@ -126,6 +126,13 @@ const SearchBar = ({ value = '', onSearch, onQueryChange, className = '', showSe
             if (suggestTimerRef.current) clearTimeout(suggestTimerRef.current)
         }
     }, [])
+
+    // Auto-focus: espera a que la animación de apertura termine (~200ms)
+    useEffect(() => {
+        if (!autoFocus) return
+        const timer = setTimeout(() => inputRef.current?.focus(), 200)
+        return () => clearTimeout(timer)
+    }, [autoFocus])
 
     const executeSearch = useCallback((searchText) => {
         const trimmed = searchText.trim()
