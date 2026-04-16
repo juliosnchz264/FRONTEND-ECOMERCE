@@ -1,5 +1,6 @@
 // hooks/useSearch.js
 import { useState, useCallback, useRef, useEffect } from 'react'
+import api from '../services/api'
 
 export const useSearch = () => {
     const [results, setResults] = useState([])
@@ -57,34 +58,10 @@ export const useSearch = () => {
         setLoading(true)
 
         try {
-            const params = new URLSearchParams({
-                q: searchQuery.trim(),
-                page: page.toString(),
-                limit: '20',
-            })
-
-            const response = await fetch(`/api/search?${params}`, {
+            const { data } = await api.get('/search', {
+                params: { q: searchQuery.trim(), page, limit: 20 },
                 signal: controller.signal,
             })
-
-            // Manejar rate limit (429)
-            if (response.status === 429) {
-                const retryAfter = parseInt(response.headers.get('Retry-After') || '5', 10)
-                setRateLimited(true)
-                setLoading(false)
-
-                // Auto-retry después del período de espera
-                if (retryTimerRef.current) clearTimeout(retryTimerRef.current)
-                retryTimerRef.current = setTimeout(() => {
-                    setRateLimited(false)
-                    // Reintentar la última búsqueda
-                    const { query: lastQ, page: lastP } = lastSearchRef.current
-                    if (lastQ) search(lastQ, lastP)
-                }, retryAfter * 1000)
-                return
-            }
-
-            const data = await response.json()
 
             if (data.success) {
                 setResults(data.products.map(normalizeProduct))
@@ -95,7 +72,7 @@ export const useSearch = () => {
                 })
             }
         } catch (error) {
-            if (error.name !== 'AbortError') {
+            if (error.name !== 'AbortError' && error.code !== 'ERR_CANCELED') {
                 console.error('Error en búsqueda:', error)
             }
         } finally {
