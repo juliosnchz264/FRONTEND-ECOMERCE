@@ -59,5 +59,6 @@ coverage
 *.pem
 *.key
 *.cert
-*.p12.agents/
+
+.agents/
 skills-lock.json

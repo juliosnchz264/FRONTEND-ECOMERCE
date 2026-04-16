@@ -3,6 +3,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { FiSearch, FiX } from 'react-icons/fi'
+import api from '../../services/api'
 
 const SearchBar = ({ value = '', onSearch, onQueryChange, className = '', showSearchIcon = true }) => {
     // Si el padre pasa value, usamos eso; si no, estado local
@@ -54,21 +55,15 @@ const SearchBar = ({ value = '', onSearch, onQueryChange, className = '', showSe
 
         setLoadingSuggestions(true)
         try {
-            const response = await fetch(
-                `/api/search/suggestions?q=${encodeURIComponent(searchQuery)}&limit=6`,
-                { signal: controller.signal }
-            )
-            // Si hay rate limit, silenciar y no reintentar sugerencias
-            if (response.status === 429) {
-                setLoadingSuggestions(false)
-                return
-            }
-            const data = await response.json()
+            const { data } = await api.get('/search/suggestions', {
+                params: { q: searchQuery, limit: 6 },
+                signal: controller.signal,
+            })
             if (data.success) {
                 setSuggestions(data.suggestions)
             }
         } catch (error) {
-            if (error.name !== 'AbortError') {
+            if (error.name !== 'AbortError' && error.code !== 'ERR_CANCELED') {
                 console.error('Error sugerencias:', error)
             }
         } finally {
